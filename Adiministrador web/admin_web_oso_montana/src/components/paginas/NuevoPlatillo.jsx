@@ -144,7 +144,6 @@ const NuevoPlatillo = () => {
                 <option value="cena">Cena</option>
                 <option value="bebida">Bebidas</option>
                 <option value="postre">Postre</option>
-                <option value="ensalada">Ensalada</option>
               </select>
             </div>
             {formik.touched.categoria && formik.errors.categoria ? (
