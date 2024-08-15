@@ -7,11 +7,14 @@ import { addDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const NuevoPlatillo = () => {
+  // Estado para manejar la subida de la imagen, progreso de la subida y URL de la imagen
   const [subiendo, setSubiendo] = useState(false);
   const [progreso, setProgreso] = useState(0);
   const [urlimagen, setUrlimagen] = useState('');
+  const [errorGlobal, setErrorGlobal] = useState('');
   const navigate = useNavigate();
 
+  // Funciones para manejar los estados de la subida de la imagen
   const handleUploadStart = () => {
     setSubiendo(true);
     setProgreso(0);
@@ -27,8 +30,9 @@ const NuevoPlatillo = () => {
       const url = await getDownloadURL(ref(storage, `productos/${filename}`));
       setUrlimagen(url);
       setSubiendo(false);
+      formik.setFieldValue('imagen', url); // Actualizar el campo de imagen en Formik
     } catch (error) {
-      console.error(error);
+      handleUploadError(error);
     }
   };
 
@@ -36,42 +40,52 @@ const NuevoPlatillo = () => {
     setProgreso(progress);
   };
 
+  // Función para manejar la subida del archivo
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
-    const storageRef = ref(storage, `productos/${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    if (file) {
+      const storageRef = ref(storage, `productos/${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-    handleUploadStart();
+      handleUploadStart();
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        handleProgress(progress);
-      },
-      (error) => {
-        handleUploadError(error);
-      },
-      () => {
-        handleUploadSuccess(file.name);
-      }
-    );
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          handleProgress(progress);
+        },
+        (error) => {
+          handleUploadError(error);
+        },
+        () => {
+          handleUploadSuccess(file.name);
+        }
+      );
+    }
   };
 
+  // Configuración de Formik para manejar el formulario
   const formik = useFormik({
     initialValues: {
       nombre: '',
       precio: '',
       categoria: '',
-      descripcion: ''
+      descripcion: '',
+      imagen: '' // Añadir campo de imagen a los valores iniciales
     },
     validationSchema: Yup.object({
       nombre: Yup.string().min(3, 'Los platillos deben tener al menos 3 caracteres.').required('El nombre del platillo es obligatorio.'),
       precio: Yup.number().min(1, 'Debes agregar un número.').required('El precio es obligatorio.'),
-      categoria: Yup.string().required('La categoria es obligatoria.'),
-      descripcion: Yup.string().min(10, 'La descripción debe ser más larga.').required('La descripción es obligatoria.')
+      categoria: Yup.string().required('La categoría es obligatoria.'),
+      descripcion: Yup.string().min(10, 'La descripción debe ser más larga.').required('La descripción es obligatoria.'),
+      imagen: Yup.string().required('La imagen es obligatoria.') // Añadir validación de Yup para el campo de imagen
     }),
     onSubmit: async (platillo) => {
+      if (!urlimagen) {
+        setErrorGlobal('Hubo un error: no has seleccionado ninguna imagen.');
+        return;
+      }
       try {
         platillo.existencia = true;
         platillo.imagen = urlimagen;
@@ -82,6 +96,7 @@ const NuevoPlatillo = () => {
       }
     }
   });
+
 
   return (
     <>
@@ -95,18 +110,16 @@ const NuevoPlatillo = () => {
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="nombre"
                 type="text"
-                placeholder="Nombre Platillo"
-                value={formik.values.nombre}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                placeholder="Nombre del platillo"
+                {...formik.getFieldProps('nombre')}
               />
+              {formik.touched.nombre && formik.errors.nombre && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
+                  <p className="font-bold">Hubo un error:</p>
+                  <p>{formik.errors.nombre}</p>
+                </div>
+              )}
             </div>
-            {formik.touched.nombre && formik.errors.nombre ? (
-              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                <p className="font-bold">Hubo un error:</p>
-                <p>{formik.errors.nombre}</p>
-              </div>
-            ) : null}
 
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="precio">Precio</label>
@@ -114,44 +127,54 @@ const NuevoPlatillo = () => {
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="precio"
                 type="number"
-                placeholder="$20"
-                min="0"
-                value={formik.values.precio}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                placeholder="Precio del platillo"
+                {...formik.getFieldProps('precio')}
               />
+              {formik.touched.precio && formik.errors.precio && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
+                  <p className="font-bold">Hubo un error:</p>
+                  <p>{formik.errors.precio}</p>
+                </div>
+              )}
             </div>
-            {formik.touched.precio && formik.errors.precio ? (
-              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                <p className="font-bold">Hubo un error:</p>
-                <p>{formik.errors.precio}</p>
-              </div>
-            ) : null}
 
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="categoria">Categoría</label>
               <select
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="categoria"
-                name="categoria"
-                value={formik.values.categoria}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                {...formik.getFieldProps('categoria')}
               >
                 <option value="">-- Seleccione --</option>
                 <option value="desayuno">Desayuno</option>
                 <option value="comida">Comida</option>
                 <option value="cena">Cena</option>
-                <option value="bebida">Bebidas</option>
                 <option value="postre">Postre</option>
+                <option value="bebida">Bebida</option>
               </select>
+              {formik.touched.categoria && formik.errors.categoria && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
+                  <p className="font-bold">Hubo un error:</p>
+                  <p>{formik.errors.categoria}</p>
+                </div>
+              )}
             </div>
-            {formik.touched.categoria && formik.errors.categoria ? (
-              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                <p className="font-bold">Hubo un error:</p>
-                <p>{formik.errors.categoria}</p>
-              </div>
-            ) : null}
+
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="descripcion">Descripción</label>
+              <textarea
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                id="descripcion"
+                placeholder="Descripción del platillo"
+                {...formik.getFieldProps('descripcion')}
+              />
+              {formik.touched.descripcion && formik.errors.descripcion && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
+                  <p className="font-bold">Hubo un error:</p>
+                  <p>{formik.errors.descripcion}</p>
+                </div>
+              )}
+            </div>
 
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imagen">Imagen</label>
@@ -160,48 +183,209 @@ const NuevoPlatillo = () => {
                 id="imagen"
                 type="file"
                 accept="image/*"
-                onChange={handleFileUpload}
+                onChange={(event) => {
+                  formik.setFieldValue('imagen', event.currentTarget.files[0]);
+                  handleFileUpload(event);
+                }}
               />
-            </div>
-            {subiendo && (
-              <div className="relative w-full border">
-                <div className="bg-green-500 absolute left-0 top-0 text-white px-2 text-sm h-12 flex items-center" style={{ width: `${progreso}%` }}>
-                  {progreso} %
-                </div>
-              </div>
-            )}
-            {urlimagen && (
-              <p className="bg-green-500 text-white p-3 text-center my-5">
-                La imagen se subió correctamente
-              </p>
-            )}
 
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="descripcion">Descripción</label>
-              <textarea
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-40"
-                id="descripcion"
-                placeholder="Descripción del Platillo"
-                value={formik.values.descripcion}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-              ></textarea>
+              {subiendo && (
+                <div className="loader-container mt-2">
+                  <div className="loader"></div>
+                </div>
+              )}
+
+              {urlimagen && (
+                <p className="notification mt-5">
+                  La imagen se subió correctamente
+                </p>
+              )}
+              {formik.touched.imagen && formik.errors.imagen && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
+                  <p className="font-bold">Hubo un error:</p>
+                  <p>{formik.errors.imagen}</p>
+                </div>
+              )}
             </div>
-            {formik.touched.descripcion && formik.errors.descripcion ? (
+
+            {errorGlobal && (
               <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
                 <p className="font-bold">Hubo un error:</p>
-                <p>{formik.errors.descripcion}</p>
+                <p>{errorGlobal}</p>
               </div>
-            ) : null}
+            )}
 
-            <input
-              type="submit"
-              className="bg-gray-800 hover:bg-gray-900 w-full p-2 text-white uppercase font-bold"
-              value="Agregar Platillo"
-            />
+            <button type="submit" className="btn">
+              <span data-text="Agregar Platillo">Agregar Platillo</span>
+            </button>
           </form>
         </div>
       </div>
+
+
+      {/* CSS en línea */}
+      <style jsx>{`
+    .loader-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .loader {
+      font-weight: bold;
+      font-family: monospace;
+      display: inline-grid;
+      font-size: 30px;
+    }
+    .loader:before,
+    .loader:after {
+      content: "subiendo imagen....";
+      grid-area: 1/1;
+      -webkit-mask-size: 1.5ch 100%, 100% 100%;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: l36-1 1s infinite;
+    }
+    .loader:before {
+      -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    }
+    .loader:after {
+      -webkit-mask-image: linear-gradient(#000 0 0);
+      animation: l36-1 1s infinite, l36-2 0.2s infinite cubic-bezier(0.5, 200, 0.5, -200);
+    }
+    @keyframes l36-1 {
+      0% {
+        -webkit-mask-position: 0 0, 0 0;
+      }
+      20% {
+        -webkit-mask-position: 0.5ch 0, 0 0;
+      }
+      40% {
+        -webkit-mask-position: 100% 0, 0 0;
+      }
+      60% {
+        -webkit-mask-position: 4.5ch 0, 0 0;
+      }
+      80% {
+        -webkit-mask-position: 6.5ch 0, 0 0;
+      }
+      100% {
+        -webkit-mask-position: 2.5ch 0, 0 0;
+      }
+    }
+    @keyframes l36-2 {
+      100% {
+        transform: translateY(0.2px);
+      }
+    }
+    .notification {
+      display: inline-block;
+      font-size: 15px;
+      padding: 0.7em 2.7em;
+      letter-spacing: 0.06em;
+      position: relative;
+      font-family: inherit;
+      border-radius: 0.6em;
+      overflow: hidden;
+      line-height: 1.4em;
+      border: 2px solid #000000;
+      background: linear-gradient(to right, rgba(27, 253, 156, 0.1) 1%, transparent 40%, transparent 60%, rgba(27, 253, 156, 0.1) 100%);
+      color: #000000;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4), 0 0 9px 3px rgba(0, 0, 0, 0.1);
+      animation: notification-animation 2s linear infinite;
+    }
+    @keyframes notification-animation {
+      0% {
+        background-position: 0% 50%;
+      }
+      100% {
+        background-position: 100% 50%;
+      }
+    }
+    .btn {
+      background: transparent;
+      border: 1px solid #141414;
+      outline: none;
+      padding: 12px 80px;
+      height: 50px;
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scaleX(1);
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0, 1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .btn:hover {
+      animation: animate-scaleX 0.6s cubic-bezier(0.4, 0, 0, 1);
+      background: transparent;
+    }
+
+    .btn::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      background: black;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0, 1),
+        border-radius 0.5s cubic-bezier(0.4, 0, 0, 1);
+      width: 100%;
+      height: 100%;
+      border-radius: 50% 50% 0 0;
+      transform: translateY(100%);
+    }
+
+    .btn:hover::after {
+      transform: translateY(0%);
+      border-radius: 0;
+    }
+
+    .btn span {
+      font-size: 20px;
+      font-weight: 500;
+      overflow: hidden;
+      position: relative;
+      color: black;
+    }
+
+    .btn span:after {
+      width: 100%;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0, 1);
+      content: attr(data-text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      z-index: 1;
+      transform: translate(-50%, 100%);
+      color: white;
+    }
+    .btn:hover span:after {
+      transform: translate(-50%, 0);
+    }
+
+    .btn:focus {
+      outline: none;
+    }
+
+    @keyframes animate-scaleX {
+      0% {
+        transform: scaleX(1);
+      }
+      50% {
+        transform: scaleX(1.05);
+      }
+      100% {
+        transform: scaleX(1);
+      }
+    }
+  `}</style>
     </>
   );
 };
