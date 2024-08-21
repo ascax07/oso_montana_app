@@ -6,44 +6,63 @@ import { db, storage } from '../../firebase/config';
 import { addDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
+const MAX_FILE_SIZE_MB = 2; // Tamaño máximo del archivo en MB
+
 const NuevoPlatillo = () => {
-  // Estado para manejar la subida de la imagen, progreso de la subida y URL de la imagen
+  // Estados para manejar el proceso de subida de la imagen
   const [subiendo, setSubiendo] = useState(false);
   const [progreso, setProgreso] = useState(0);
-  const [urlimagen, setUrlimagen] = useState('');
+  const [urlimagen, setUrlimagen] = useState(''); // URL de la imagen subida
   const [errorGlobal, setErrorGlobal] = useState('');
   const navigate = useNavigate();
 
-  // Funciones para manejar los estados de la subida de la imagen
+  // Maneja el inicio de la subida de la imagen
   const handleUploadStart = () => {
     setSubiendo(true);
     setProgreso(0);
   };
 
+  // Maneja errores durante la subida
   const handleUploadError = (error) => {
     setSubiendo(false);
     console.error(error);
   };
 
+  // Maneja el éxito de la subida y obtiene la URL de la imagen
   const handleUploadSuccess = async (filename) => {
     try {
       const url = await getDownloadURL(ref(storage, `productos/${filename}`));
-      setUrlimagen(url);
+      setUrlimagen(url); // Almacena la URL de la imagen subida
       setSubiendo(false);
-      formik.setFieldValue('imagen', url); // Actualizar el campo de imagen en Formik
+      formik.setFieldValue('imagen', url); // Actualiza el campo 'imagen' en el formulario
     } catch (error) {
       handleUploadError(error);
     }
   };
 
+  // Maneja el progreso de la subida de la imagen
   const handleProgress = (progress) => {
     setProgreso(progress);
   };
 
-  // Función para manejar la subida del archivo
+  // Maneja la subida del archivo seleccionado
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
+    
     if (file) {
+      // Validación del tamaño del archivo
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        alert('La imagen debe ser menor de 2MB.');
+        return;
+      }
+
+      // Validación del tipo de archivo
+      const validTypes = ['image/jpeg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        alert('Solo se permiten archivos JPG o PNG.');
+        return;
+      }
+
       const storageRef = ref(storage, `productos/${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -65,21 +84,21 @@ const NuevoPlatillo = () => {
     }
   };
 
-  // Configuración de Formik para manejar el formulario
+  // Configuración del formulario usando Formik
   const formik = useFormik({
     initialValues: {
       nombre: '',
       precio: '',
       categoria: '',
       descripcion: '',
-      imagen: '' // Añadir campo de imagen a los valores iniciales
+      imagen: '' // Campo para la URL de la imagen
     },
     validationSchema: Yup.object({
       nombre: Yup.string().min(3, 'Los platillos deben tener al menos 3 caracteres.').required('El nombre del platillo es obligatorio.'),
       precio: Yup.number().min(1, 'Debes agregar un número.').required('El precio es obligatorio.'),
       categoria: Yup.string().required('La categoría es obligatoria.'),
       descripcion: Yup.string().min(10, 'La descripción debe ser más larga.').required('La descripción es obligatoria.'),
-      imagen: Yup.string().required('La imagen es obligatoria.') // Añadir validación de Yup para el campo de imagen
+      imagen: Yup.string().required('La imagen es obligatoria.') // Validación para la imagen
     }),
     onSubmit: async (platillo) => {
       if (!urlimagen) {
@@ -97,20 +116,21 @@ const NuevoPlatillo = () => {
     }
   });
 
-
   return (
     <>
       <h1 className="text-3xl font-light mb-4">Agregar platillos</h1>
       <div className="flex justify-center mt-10">
         <div className="w-full max-w-3xl">
           <form onSubmit={formik.handleSubmit}>
+            {/* Campos de formulario */}
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nombre">Nombre</label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nombre">
+                Nombre
+              </label>
               <input
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="nombre"
                 type="text"
-                placeholder="Nombre del platillo"
                 {...formik.getFieldProps('nombre')}
               />
               {formik.touched.nombre && formik.errors.nombre && (
@@ -122,12 +142,13 @@ const NuevoPlatillo = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="precio">Precio</label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="precio">
+                Precio
+              </label>
               <input
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="precio"
                 type="number"
-                placeholder="Precio del platillo"
                 {...formik.getFieldProps('precio')}
               />
               {formik.touched.precio && formik.errors.precio && (
@@ -161,11 +182,13 @@ const NuevoPlatillo = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="descripcion">Descripción</label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="descripcion">
+                Descripción
+              </label>
               <textarea
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="descripcion"
-                placeholder="Descripción del platillo"
+                rows="4"
                 {...formik.getFieldProps('descripcion')}
               />
               {formik.touched.descripcion && formik.errors.descripcion && (
@@ -177,28 +200,33 @@ const NuevoPlatillo = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imagen">Imagen</label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imagen">
+                Imagen
+              </label>
               <input
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 id="imagen"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg, image/png"
                 onChange={(event) => {
                   formik.setFieldValue('imagen', event.currentTarget.files[0]);
-                  handleFileUpload(event);
+                  handleFileUpload(event); // Llama a la función de subida cuando se selecciona un archivo
                 }}
               />
-
               {subiendo && (
                 <div className="loader-container mt-2">
                   <div className="loader"></div>
                 </div>
               )}
-
+              {/* Muestra la imagen subida y establece su tamaño */}
               {urlimagen && (
-                <p className="notification mt-5">
-                  La imagen se subió correctamente
-                </p>
+                <div className="mt-2">
+                  <img
+                    src={urlimagen}
+                    alt="Imagen subida"
+                    style={{ maxWidth: '100%', maxHeight: '200px' }}
+                  />
+                </div>
               )}
               {formik.touched.imagen && formik.errors.imagen && (
                 <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
@@ -208,22 +236,14 @@ const NuevoPlatillo = () => {
               )}
             </div>
 
-            {errorGlobal && (
-              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                <p className="font-bold">Hubo un error:</p>
-                <p>{errorGlobal}</p>
-              </div>
-            )}
-
+            <div className="flex items-center justify-between">
             <button type="submit" className="btn">
               <span data-text="Agregar Platillo">Agregar Platillo</span>
             </button>
+            </div>
           </form>
         </div>
       </div>
-
-
-      {/* CSS en línea */}
       <style jsx>{`
     .loader-container {
       display: flex;
