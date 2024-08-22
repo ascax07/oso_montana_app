@@ -1,0 +1,79 @@
+.Padre {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Asegura que ocupe toda la altura de la ventana */
+    padding: 20px; /* Espacio alrededor del contenido */
+}
+
+.tamaño-imagen {
+    width: 100%;
+    max-width: 600px; /* Limita el ancho máximo de la imagen */
+    height: auto; /* Mantiene la proporción de la imagen */
+    margin: 0 auto; /* Centra la imagen horizontalmente */
+    border-radius: 15px; /* Redondea las esquinas de la imagen */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Añade sombra a la imagen */
+}
+.estilo-profile{
+    border-radius: 50%;
+    height: 120px;
+    width: 120px;
+    margin: 0 auto;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    
+}
+.card {
+    width: 100%;
+    max-width: 500px; /* Limita el ancho máximo del formulario */
+    border-radius: 15px; /* Redondea las esquinas del formulario */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Añade sombra al formulario */
+    overflow: hidden; /* Asegura que el contenido no se desborde */
+}
+
+.card-body {
+    padding: 30px; /* Espacio interno en el formulario */
+}
+
+.cajatexto {
+    background-color: #f4f4f4; /* Color de fondo más claro */
+    border-color: #ddd; /* Color del borde más claro */
+    border-radius: 25px; /* Redondea más las esquinas */
+    width: 100%;
+    padding: 15px;
+    border-width: 1px; /* Añade un borde visible */
+    margin-bottom: 20px;
+}
+
+.cajatexto:focus {
+    outline: 1px solid rgb(228, 129, 149);
+    box-shadow: 0 0 10px rgb(228, 129, 149);
+}
+
+.btnform {
+    background-color: #e49f9f; /* Color de fondo más fuerte */
+    border-radius: 25px; /* Redondea más las esquinas */
+    width: 100%;
+    padding: 15px;
+    border-width: 1px; /* Añade un borde visible */
+    color: white; /* Texto blanco */
+    cursor: pointer; /* Cambia el cursor al pasar por encima */
+}
+
+.texto {
+    font-size: 18px; /* Tamaño de fuente ligeramente más pequeño */
+    color: slategray;
+    font-family: Arial, Helvetica, sans-serif;
+    margin-top: 10px; /* Ajusta el margen superior */
+    text-align: center; /* Centra el texto */
+}
+
+.btnswicth {
+    background-color: darkred;
+    border-radius: 25px; /* Redondea más las esquinas */
+    padding: 10px;
+    border-width: 1px; /* Añade un borde visible */
+    color: white;
+    cursor: pointer; /* Cambia el cursor al pasar por encima */
+}
+    
