@@ -6,6 +6,7 @@ const Sidebar = () => {
     const locations = [
         { to: "/", name: "Ordenes" },
         { to: "/menu", name: "Menú" },
+        { to: "/mesas", name: "Mesas" },
     ];
 
     return (

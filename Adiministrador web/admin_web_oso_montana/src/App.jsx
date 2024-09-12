@@ -6,6 +6,11 @@ import Ordenes from './components/paginas/Ordenes';
 import Menu from './components/paginas/Menu';
 import NuevoPlatillo from './components/paginas/NuevoPlatillo';
 import Sidebar from './components/ui/Sidebar';
+import EditarPlatillo from './components/paginas/EditarPlatillo';
+import Mesas from './components/paginas/Mesas';
+import NuevaMesa from './components/paginas/NuevaMesa';
+import EditarMesa from './components/paginas/EditarMesa';
+
 
 function App() {
   return (
@@ -17,6 +22,10 @@ function App() {
             <Route path="/" element={<Ordenes />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/nuevo-platillo" element={<NuevoPlatillo />} />
+            <Route path="/editar-platillo/:id" element={<EditarPlatillo />} />
+            <Route path="/mesas" element={<Mesas />} />
+            <Route path="/nueva-mesa" element={<NuevaMesa />} />
+            <Route path="/editar-mesa/:id" element={<EditarMesa />} />
           </Routes>
         </div>
       </div>
