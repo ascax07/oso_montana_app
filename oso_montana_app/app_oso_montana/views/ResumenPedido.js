@@ -103,7 +103,8 @@ const ResumenPedido = () => {
                                     <VStack>
                                         <Text bold>{nombre}</Text>
                                         <Text>Cantidad: {cantidad}</Text>
-                                        <Text>Precio: $ {precio}</Text>
+                                        <Text>Precio: $ {precio.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text>
+
                                         <Button
                                             onPress={() => confirmarEliminacion(id)}
                                             colorScheme="danger"
@@ -116,9 +117,7 @@ const ResumenPedido = () => {
                             </Box>
                         );
                     })}
-
-                    <Text style={globalStyles.cantidad}>Total a Pagar: $ {total}</Text>
-
+                    <Text style={globalStyles.cantidad}>Total a Pagar: $  {total.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text>
                     <Button
                         onPress={() => navigation.navigate('Menu')}
                         colorScheme="dark"
