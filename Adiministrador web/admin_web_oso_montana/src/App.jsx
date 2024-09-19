@@ -10,6 +10,13 @@ import EditarPlatillo from './components/paginas/EditarPlatillo';
 import Mesas from './components/paginas/Mesas';
 import NuevaMesa from './components/paginas/NuevaMesa';
 import EditarMesa from './components/paginas/EditarMesa';
+import Ingresos from './components/paginas/Ingresos';
+import Graficas from './components/paginas/Graficas';
+
+
+import "primereact/resources/themes/lara-light-cyan/theme.css";
+import 'primereact/resources/primereact.min.css';           // Estilos generales de PrimeReact
+import 'primeicons/primeicons.css';                         // Iconos
 
 
 function App() {
@@ -26,6 +33,10 @@ function App() {
             <Route path="/mesas" element={<Mesas />} />
             <Route path="/nueva-mesa" element={<NuevaMesa />} />
             <Route path="/editar-mesa/:id" element={<EditarMesa />} />
+            <Route path="/ingresos" element={<Ingresos />} />
+            <Route path="/graficas" element={<Graficas />} />
+
+
           </Routes>
         </div>
       </div>

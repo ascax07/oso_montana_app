@@ -3,22 +3,21 @@ import { Link } from 'react-router-dom';
 import { FirebaseContext } from '../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import Mesa from '../ui/Mesa';
+import CategoriaMesas from '../paginas/filtroCategorias/CategoriaMesas';
 
 const Mesas = () => {
-  // Definir el state para las mesas
   const [mesas, guardarMesas] = useState([]);
-
+  const [mesasFiltradas, guardarMesasFiltradas] = useState([]);
   const { firebase } = useContext(FirebaseContext);
 
-  // Consultar la base de datos al cargar
   useEffect(() => {
     const obtenerMesas = () => {
-      firebase.db.collection('mesas').onSnapshot(manejarSnapshot);
+      const unsuscribe = collection(firebase.db, 'mesas');
+      onSnapshot(unsuscribe, manejarSnapshot);
     };
     obtenerMesas();
-  }, []);
+  }, [firebase]);
 
-  // Snapshot nos permite utilizar la base de datos en tiempo real de firestore
   function manejarSnapshot(snapshot) {
     const mesas = snapshot.docs.map(doc => {
       return {
@@ -26,10 +25,18 @@ const Mesas = () => {
         ...doc.data(),
       };
     });
-
-    // Almacenar los resultados en el state
     guardarMesas(mesas);
+    guardarMesasFiltradas(mesas); // Inicialmente mostrar todas las mesas
   }
+
+  const filtrarUbicacion = (ubicacion) => {
+    if (ubicacion) {
+      const mesasFiltradas = mesas.filter(mesa => mesa.ubicacion === ubicacion);
+      guardarMesasFiltradas(mesasFiltradas);
+    } else {
+      guardarMesasFiltradas(mesas); // Mostrar todas si no hay filtro
+    }
+  };
 
   return (
     <>
@@ -38,7 +45,10 @@ const Mesas = () => {
         Agregar Mesa
       </Link>
 
-      {mesas.map(mesa => (
+      {/* Componente de categorías para filtrar */}
+      <CategoriaMesas filtrarUbicacion={filtrarUbicacion} />
+
+      {mesasFiltradas.map(mesa => (
         <Mesa key={mesa.id} mesa={mesa} />
       ))}
     </>

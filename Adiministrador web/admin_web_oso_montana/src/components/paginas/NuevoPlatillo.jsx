@@ -1,62 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import { db, storage } from '../../firebase/config';
 import { addDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { Toast } from 'primereact/toast';
+import { Button } from 'primereact/button';
 
 const MAX_FILE_SIZE_MB = 2; // Tamaño máximo del archivo en MB
 
 const NuevoPlatillo = () => {
-  // Estados para manejar el proceso de subida de la imagen
   const [subiendo, setSubiendo] = useState(false);
   const [progreso, setProgreso] = useState(0);
-  const [urlimagen, setUrlimagen] = useState(''); // URL de la imagen subida
+  const [urlimagen, setUrlimagen] = useState('');
   const [errorGlobal, setErrorGlobal] = useState('');
+  const toast = useRef(null);
   const navigate = useNavigate();
 
-  // Maneja el inicio de la subida de la imagen
   const handleUploadStart = () => {
     setSubiendo(true);
     setProgreso(0);
   };
 
-  // Maneja errores durante la subida
   const handleUploadError = (error) => {
     setSubiendo(false);
     console.error(error);
   };
 
-  // Maneja el éxito de la subida y obtiene la URL de la imagen
   const handleUploadSuccess = async (filename) => {
     try {
       const url = await getDownloadURL(ref(storage, `productos/${filename}`));
-      setUrlimagen(url); // Almacena la URL de la imagen subida
+      setUrlimagen(url);
       setSubiendo(false);
-      formik.setFieldValue('imagen', url); // Actualiza el campo 'imagen' en el formulario
+      formik.setFieldValue('imagen', url);
     } catch (error) {
       handleUploadError(error);
     }
   };
 
-  // Maneja el progreso de la subida de la imagen
   const handleProgress = (progress) => {
     setProgreso(progress);
   };
 
-  // Maneja la subida del archivo seleccionado
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     
     if (file) {
-      // Validación del tamaño del archivo
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
         alert('La imagen debe ser menor de 2MB.');
         return;
       }
 
-      // Validación del tipo de archivo
       const validTypes = ['image/jpeg', 'image/png'];
       if (!validTypes.includes(file.type)) {
         alert('Solo se permiten archivos JPG o PNG.');
@@ -84,7 +80,6 @@ const NuevoPlatillo = () => {
     }
   };
 
-  // Configuración del formulario usando Formik
   const formik = useFormik({
     initialValues: {
       nombre: '',
@@ -106,24 +101,40 @@ const NuevoPlatillo = () => {
         return;
       }
 
-      const confirmacion = window.confirm('¿Estás seguro de que quieres agregar este platillo?');
-      if (!confirmacion) {
-        return;
-      }
-
-      try {
-        platillo.existencia = true;
-        platillo.imagen = urlimagen;
-        await addDoc(collection(db, 'productos'), platillo);
-        alert('Platillo agregado con éxito.');
-        navigate('/menu');
-      } catch (error) {
-        console.error(error);
-      }
+      confirmDialog({
+        message: '¿Estás seguro de que quieres agregar este platillo?',
+        header: 'Confirmación',
+        icon: 'pi pi-exclamation-triangle',
+        defaultFocus: 'accept',
+        acceptClassName: 'p-button p-button-success bg-green-500 text-white hover:bg-green-600 border-none rounded-lg px-6 py-3 transition duration-300 ease-in-out mx-2',
+        rejectClassName: 'p-button p-button-secondary bg-gray-500 text-white hover:bg-gray-600 border-none rounded-lg px-6 py-3 transition duration-300 ease-in-out mx-2',
+        accept: async () => {
+            try {
+                formik.values.existencia = true;
+                formik.values.imagen = urlimagen;
+                await addDoc(collection(db, 'productos'), formik.values);
+                toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Platillo agregado con éxito.', life: 3000 });
+    
+                // Esperar a que el toast se muestre antes de navegar
+                setTimeout(() => {
+                    navigate('/menu');
+                }, 100); // Debe coincidir con la duración del toast
+            } catch (error) {
+                console.error(error);
+                toast.current.show({ severity: 'error', summary: 'Error', detail: 'Hubo un error al agregar el platillo.', life: 3000 });
+            }
+        },
+        reject: () => {
+            toast.current.show({ severity: 'warn', summary: 'Rechazado', detail: 'Operación cancelada.', life: 3000 });
+        }
+    });
+    
     }
   });
   return (
     <>
+     <Toast ref={toast} />
+     <ConfirmDialog />
       <h1 className="text-3xl font-light mb-4">Agregar platillos</h1>
       <div className="flex justify-center mt-10">
         <div className="w-full max-w-3xl">

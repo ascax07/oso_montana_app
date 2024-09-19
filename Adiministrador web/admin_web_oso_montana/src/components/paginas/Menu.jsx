@@ -1,54 +1,63 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { FirebaseContext } from '../../firebase';
-import { collection, onSnapshot } from "firebase/firestore";
 import Platillo from "../ui/Platillo";
+import CategoriaPlatillo from '../../components/paginas/filtroCategorias/CategoriaPlatillo';
 
 const Menu = () => {
-
-    // definir el state para los platillos
-    const [ platillos, guadarPlatillos ] = useState([]);
+    // Definir el state para los platillos
+    const [platillos, guardarPlatillos] = useState([]);
+    const [platillosFiltrados, guardarPlatillosFiltrados] = useState([]);
 
     const { firebase } = useContext(FirebaseContext);
 
-    // consultar la base de datos al cargar
+    // Consultar la base de datos al cargar
     useEffect(() => {
-        const obtenerPlatillos =  () => {
-           firebase.db.collection('productos').onSnapshot(manejarSnapshot);
-        }
+        const obtenerPlatillos = () => {
+            firebase.db.collection('productos').onSnapshot(manejarSnapshot);
+        };
         obtenerPlatillos();
     }, []);
 
-    // Snapshot nos permite utilizar la base de datos en tiempo real de firestore
+    // Snapshot para manejar los datos en tiempo real
     function manejarSnapshot(snapshot) {
         const platillos = snapshot.docs.map(doc => {
             return {
                 id: doc.id,
                 ...doc.data()
-            }
+            };
         });
 
-        // almacenar los resultados en el state
-        guadarPlatillos(platillos);
+        // Guardar los resultados en el state
+        guardarPlatillos(platillos);
+        guardarPlatillosFiltrados(platillos);  // Inicialmente mostrar todos
     }
 
+    // Filtrar los platillos por categoría
+    const filtrarCategoria = categoria => {
+        if (categoria) {
+            const platillosFiltrados = platillos.filter(platillo => platillo.categoria === categoria);
+            guardarPlatillosFiltrados(platillosFiltrados);
+        } else {
+            guardarPlatillosFiltrados(platillos); // Mostrar todos si no hay filtro
+        }
+    };
 
-    return ( 
+    return (
         <>
-            <h1 className="text-3xl font-light mb-4">Menu</h1>
-            <Link to="/nuevo-platillo" className="  bg-blue-800 hover:bg-blue-700, inline-block mb-5 p-2 text-white uppercase font-bold">
+            <h1 className="text-3xl font-light mb-4">Menú</h1>
+            <Link to="/nuevo-platillo" className="bg-blue-800 hover:bg-blue-700 inline-block mb-5 p-2 text-white uppercase font-bold">
                 Agregar Platillo
             </Link>
 
-            {platillos.map( platillo => (
-                <Platillo
-                    key={platillo.id}
-                    platillo={platillo}
-                />
-            ))}
+            {/* Componente de categorías para filtrar */}
+            <CategoriaPlatillo filtrarCategoria={filtrarCategoria} />
 
+            {platillosFiltrados.map(platillo => (
+                <Platillo key={platillo.id} platillo={platillo} />
+            ))}
         </>
-     );
-}
- 
+    );
+};
+
 export default Menu;
