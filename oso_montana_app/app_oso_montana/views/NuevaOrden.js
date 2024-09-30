@@ -1,65 +1,101 @@
 import React from 'react';
-import { StyleSheet, View , TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, BackHandler } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
-import { Box, Button, Text, NativeBaseProvider } from 'native-base';
-import globalStyles from '../styles/global';
-import { useNavigation } from '@react-navigation/native';
+import { Box, Button, Text, NativeBaseProvider, VStack, HStack, Icon, Pressable, useColorModeValue } from 'native-base';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 const NuevaOrden = () => {
-
     const navigation = useNavigation();
+    const primaryColor = '#853030';
 
+    const bgColor = useColorModeValue('warmGray.50', 'coolGray.800');
+    const textColor = useColorModeValue('coolGray.800', 'warmGray.50');
+
+    const navegarCarrito = () => {
+        navigation.navigate('Pedidos');
+    };
+
+    const navegarPerfil = () => {
+        navigation.navigate('PerfilUsuario');
+    };
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                return true;
+            };
+            BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+        }, [])
+    );
 
     return (  
         <NativeBaseProvider>
-            <Box style={globalStyles.contenedor}>
-                <Box style={[globalStyles.contenido, styles.contenido]}>
-                    <Button
-                        style={globalStyles.boton}
-                        block
-                        onPress={ () => navigation.navigate('Menu')  }
-                    >
-                        <Text style={globalStyles.botonTexto}>Crear Nueva Orden</Text>
-                    </Button>
-                </Box>
+            <Box flex={1} bg={bgColor} safeArea>
+                <VStack space={5} flex={1} justifyContent="center" alignItems="center" p={5}>
+                    <Animated.View entering={FadeIn.delay(300).duration(1000)}>
+                        <Text fontSize="4xl" fontWeight="bold" color={primaryColor} textAlign="center" mb={10}>
+                            Bienvenido
+                        </Text>
+                    </Animated.View>
+                    <Animated.View entering={FadeInDown.delay(600).duration(1000)} style={styles.buttonContainer}>
+                        <Button
+                            size="lg"
+                            onPress={() => navigation.navigate('Menu')}
+                            bg={primaryColor}
+                            _pressed={{ bg: `${primaryColor}CC` }}
+                            borderRadius="full"
+                            shadow={3}
+                            leftIcon={<Icon as={Ionicons} name="add-circle-outline" size="sm" color="white" />}
+                        >
+                            <Text color="white" fontSize="lg" fontWeight="bold">
+                                Crear Nueva Orden
+                            </Text>
+                        </Button>
+                    </Animated.View>
+                </VStack>
 
-                <View style={[styles.navbar, { marginBottom: 9 * -1 }]}>
-                    <TouchableOpacity style={styles.navButton}>
-                        <Ionicons name="home" size={25} color={'#FFFFFF'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton}>
-                        <Ionicons name="cart" size={25} color={'#FFFFFF'} />
-                    </TouchableOpacity>
-                </View>
+                <HStack style={styles.navbar} bg={primaryColor} alignItems="center" justifyContent="space-around" safeAreaBottom>
+                    <Pressable opacity={1} py="3" flex={1} onPress={() => {}}>
+                        <VStack alignItems="center">
+                            <Icon as={Ionicons} name="home" size="sm" color="white" />
+                            <Text color="white" fontSize="12">Inicio</Text>
+                        </VStack>
+                    </Pressable>
+                    <Pressable opacity={0.5} py="3" flex={1} onPress={navegarCarrito}>
+                        <VStack alignItems="center">
+                            <Icon as={Ionicons} name="cart" size="sm" color="white" />
+                            <Text color="white" fontSize="12">Pedidos</Text>
+                        </VStack>
+                    </Pressable>
+                    <Pressable opacity={0.5} py="3" flex={1} onPress={navegarPerfil}>
+                        <VStack alignItems="center">
+                            <Icon as={Ionicons} name="person" size="sm" color="white" />
+                            <Text color="white" fontSize="12">Perfil</Text>
+                        </VStack>
+                    </Pressable>
+                </HStack>
             </Box>
         </NativeBaseProvider>
     );
 }
 
 const styles = StyleSheet.create({
-    contenido: {
-        flexDirection: 'column',
-        justifyContent: 'center',
+    buttonContainer: {
+        width: '100%',
         alignItems: 'center',
-        flex: 1
     },
     navbar: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        backgroundColor: '#853030',
-        paddingVertical: 25,
-        borderTopWidth: 1,
-        borderTopColor: '#ccc',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         elevation: 4,
-      },
-      navButton: {
-        paddingHorizontal: 10,
-      },
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: -2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
 });
 
 export default NuevaOrden;

@@ -1,34 +1,67 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { Dimensions, ImageBackground, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View, Text, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { NativeBaseProvider, HStack, Button, Icon, Input, Center } from 'native-base';
-import { useNavigation } from '@react-navigation/native'; // Importa el hook
+import React, { useState, useContext, useEffect, useRef } from 'react';
+import { Dimensions, StyleSheet, Alert } from 'react-native';
+import { NativeBaseProvider, Box, Text, VStack, HStack, Button, Icon, Input, Pressable, useColorModeValue, Image, Center } from 'native-base';
+import { useNavigation } from '@react-navigation/native';
 import PedidoContext from '../context/pedidos/pedidosContext';
-import colors from '../styles/colors';
-import SPACING from '../styles/SPACING';
-import IconMaterial from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn, FadeInDown, useSharedValue, useAnimatedStyle, withSpring, interpolate, useAnimatedScrollHandler } from 'react-native-reanimated';
 
-const { height, width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const DetalleFormularioPlatillo = () => {
-    // Contexto de pedido
     const { platillo, guardarPedido } = useContext(PedidoContext);
     const { nombre, imagen, descripcion, precio } = platillo;
-
-    // Hook de navegación
     const navigation = useNavigation();
-
-    // Estado para manejar la cantidad y el total
     const [cantidad, setCantidad] = useState(1);
     const [total, setTotal] = useState(precio);
 
-    // Actualizar total cuando cambie la cantidad
+    const primaryColor = '#853030';
+    const bgColor = useColorModeValue('warmGray.50', 'coolGray.900');
+    const textColor = useColorModeValue('coolGray.800', 'warmGray.50');
+    const cardBgColor = useColorModeValue('white', 'coolGray.800');
+
+    const scrollY = useSharedValue(0);
+    const imageHeight = useSharedValue(height * 0.4);
+
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+    });
+
+    const imageStyle = useAnimatedStyle(() => {
+        const scale = interpolate(
+            scrollY.value,
+            [-100, 0],
+            [1.1, 1],
+            { extrapolateRight: 'clamp' }
+        );
+        return {
+            transform: [{ scale }],
+            height: interpolate(
+                scrollY.value,
+                [0, 200],
+                [imageHeight.value, height * 0.3],
+                { extrapolateRight: 'clamp' }
+            ),
+        };
+    });
+
+    const headerStyle = useAnimatedStyle(() => {
+        return {
+            opacity: interpolate(
+                scrollY.value,
+                [0, 100],
+                [0, 1],
+                { extrapolateRight: 'clamp' }
+            ),
+        };
+    });
+
     useEffect(() => {
         setTotal(precio * cantidad);
     }, [cantidad]);
 
-    // Funciones para manejar cantidad
     const decrementarUno = () => {
         if (cantidad > 1) {
             setCantidad(cantidad - 1);
@@ -39,7 +72,6 @@ const DetalleFormularioPlatillo = () => {
         setCantidad(cantidad + 1);
     };
 
-    // Confirmar el pedido
     const confirmarOrden = () => {
         Alert.alert(
             '¿Deseas confirmar tu pedido?',
@@ -54,7 +86,6 @@ const DetalleFormularioPlatillo = () => {
                             total
                         };
                         guardarPedido(pedido);
-                        // Navegar a la pantalla de resumen del pedido
                         navigation.navigate('ResumenPedido');
                     },
                 },
@@ -68,147 +99,139 @@ const DetalleFormularioPlatillo = () => {
 
     return (
         <NativeBaseProvider>
-            <ScrollView>
-                <SafeAreaView>
-                    <ImageBackground
-                        source={{ uri: imagen }}
-                        style={{
-                            height: height / 2 + SPACING * 2,
-                            justifyContent: 'space-between',
-                        }}
-                        imageStyle={{
-                            borderRadius: SPACING * 3,
-                        }}
-                    >
-                        <View style={{ flexDirection: 'row', padding: SPACING * 2 }}>
-                        </View>
+            <Box flex={1} bg={bgColor}>
+                <Animated.View style={[styles.header, headerStyle]}>
+                    <Text fontSize="xl" fontWeight="bold" color={textColor}>
+                        {nombre}
+                    </Text>
+                </Animated.View>
 
-                        <View
-                            style={{
-                                borderRadius: SPACING * 3,
-                                overflow: 'hidden',
-                            }}
-                        >
-                            <BlurView
-                                intensity={80}
-                                tint="dark"
-                                style={{
-                                    padding: SPACING * 2,
-                                }}
-                            >
-                                <View>
-                                    <Text
-                                        style={{
-                                            fontSize: SPACING * 2,
-                                            color: colors.white,
-                                            fontWeight: '600',
-                                            marginBottom: SPACING,
-                                        }}
-                                    >
+                <Animated.ScrollView
+                    showsVerticalScrollIndicator={false}
+                    onScroll={scrollHandler}
+                    scrollEventThrottle={16}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                >
+                    <Animated.View style={[styles.imageContainer, imageStyle]}>
+                        <Image
+                            source={{ uri: imagen }}
+                            alt={nombre}
+                            style={styles.image}
+                            resizeMode="cover"
+                        />
+                    </Animated.View>
+
+                    <Animated.View entering={FadeInDown.duration(800).delay(300)}>
+                        <Box bg={cardBgColor} borderTopRadius="3xl" mt="-40px" pt={6} px={6}>
+                            <VStack space={4}>
+                                <HStack justifyContent="space-between" alignItems="center">
+                                    <Text fontSize="3xl" fontWeight="bold" color={textColor}>
                                         {nombre}
                                     </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: SPACING * 1.8,
-                                            color: colors['white-smoke'],
-                                            fontWeight: '500',
-                                            marginBottom: SPACING,
-                                        }}
-                                    >
-                                        {descripcion}
+                                    <Text fontSize="2xl" fontWeight="bold" color={primaryColor}>
+                                        ${precio.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                     </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: SPACING * 1.8,
-                                            fontWeight: '700',
-                                            marginBottom: SPACING,
-                                        }}
-                                    >
-                                        Precio:
-                                        <Text style={{ color: colors.primary }}> $ </Text>
-                                        <Text style={{ color: colors.white }}>{precio.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text>
+                                </HStack>
+                                
+                                <Text fontSize="md" color={useColorModeValue('coolGray.600', 'coolGray.400')}>
+                                    {descripcion}
+                                </Text>
 
+                                <Box bg={useColorModeValue('coolGray.100', 'coolGray.700')} p={4} borderRadius="xl">
+                                    <HStack justifyContent="space-between" alignItems="center">
+                                        <Text fontSize="lg" fontWeight="semibold" color={textColor}>
+                                            Cantidad
+                                        </Text>
+                                        <HStack space={2} alignItems="center">
+                                            <Pressable onPress={decrementarUno}>
+                                                <Center bg={primaryColor} w={10} h={10} borderRadius="full">
+                                                    <Icon as={MaterialIcons} name="remove" size="sm" color="white" />
+                                                </Center>
+                                            </Pressable>
+                                            <Input
+                                                w={16}
+                                                textAlign="center"
+                                                fontSize="lg"
+                                                value={cantidad.toString()}
+                                                keyboardType="numeric"
+                                                onChangeText={text => setCantidad(parseInt(text) || 1)}
+                                                borderColor={primaryColor}
+                                                _focus={{
+                                                    borderColor: primaryColor,
+                                                    backgroundColor: `${primaryColor}10`,
+                                                }}
+                                            />
+                                            <Pressable onPress={incrementarUno}>
+                                                <Center bg={primaryColor} w={10} h={10} borderRadius="full">
+                                                    <Icon as={MaterialIcons} name="add" size="sm" color="white" />
+                                                </Center>
+                                            </Pressable>
+                                        </HStack>
+                                    </HStack>
+                                </Box>
+
+                                <HStack justifyContent="space-between" alignItems="center">
+                                    <Text fontSize="xl" fontWeight="semibold" color={textColor}>
+                                        Total
                                     </Text>
+                                    <Text fontSize="2xl" fontWeight="bold" color={primaryColor}>
+                                        ${total.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </Text>
+                                </HStack>
+                            </VStack>
+                        </Box>
+                    </Animated.View>
+                </Animated.ScrollView>
 
-                                </View>
-                            </BlurView>
-                        </View>
-                    </ImageBackground>
-
-                    <View
-                        style={{
-                            padding: SPACING,
-                        }}
+                <Animated.View entering={FadeInDown.duration(800).delay(600)} style={styles.bottomContainer}>
+                    <Button
+                        onPress={confirmarOrden}
+                        bg={primaryColor}
+                        _pressed={{ bg: `${primaryColor}CC` }}
+                        rounded="full"
+                        py={4}
+                        _text={{ fontSize: "lg", fontWeight: "bold" }}
+                        leftIcon={<Icon as={Ionicons} name="cart-outline" size="sm" color="white" />}
                     >
-                        <HStack space={4} justifyContent="space-between">
-                            <Text
-                                style={{
-                                    color: colors.primary,
-                                    fontSize: SPACING * 1.7,
-                                    alignSelf: 'center',
-                                }}
-                            >
-                                Subtotal: $ {total.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-
-                            </Text>
-                            <HStack space={2} alignItems="center">
-                                <Button
-                                    onPress={decrementarUno}
-                                    style={{ width: 40, height: 40, justifyContent: 'center', backgroundColor: '#000' }}
-                                >
-                                    <Icon as={IconMaterial} name="remove" style={{ fontSize: 20, color: '#FFF' }} />
-                                </Button>
-                                <Center>
-                                    <Input
-                                        w={12}
-                                        textAlign="center"
-                                        fontSize={20}
-                                        value={cantidad.toString()}
-                                        keyboardType="numeric"
-                                        onChangeText={text => setCantidad(parseInt(text) || 1)}
-                                    />
-                                </Center>
-                                <Button
-                                    onPress={incrementarUno}
-                                    style={{ width: 40, height: 40, justifyContent: 'center', backgroundColor: '#000' }}
-                                >
-                                    <Icon as={IconMaterial} name="add" style={{ fontSize: 20, color: '#FFF' }} />
-                                </Button>
-                            </HStack>
-                        </HStack>
-                    </View>
-                </SafeAreaView>
-            </ScrollView>
-            <SafeAreaView
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    paddingBottom: SPACING * 5, 
-                    paddingHorizontal: 30, 
-                }}
-            >
-                <Button
-                    onPress={confirmarOrden}
-                    style={{
-                        backgroundColor: colors.primary,
-                        width: width - SPACING * 6,
-                        justifyContent: 'center',
-                        borderRadius: SPACING * 2,
-                        paddingVertical: SPACING,
-                    }}
-                    _text={{
-                        color: colors.white,
-                        fontSize: SPACING * 2,
-                        fontWeight: '700',
-                    }}
-                >
-                    Agregar al Pedido
-                </Button>
-            </SafeAreaView>
+                        Agregar al Pedido
+                    </Button>
+                </Animated.View>
+            </Box>
         </NativeBaseProvider>
     );
 };
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+    header: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        zIndex: 1000,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageContainer: {
+        width: width,
+        height: height * 0.4,
+        overflow: 'hidden',
+    },
+    image: {
+        width: '100%',
+        height: '100%',
+    },
+    bottomContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 20,
+        paddingBottom: 30,
+        paddingTop: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    },
+});
 
 export default DetalleFormularioPlatillo;
