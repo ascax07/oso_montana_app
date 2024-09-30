@@ -1,35 +1,50 @@
 import React, { useContext } from 'react';
-import { FirebaseContext } from '../../firebase'; // Asegúrate de importar tu contexto correctamente
-import { useNavigate } from 'react-router-dom';
+import { Button } from 'primereact/button';
+import { motion } from 'framer-motion';
+import Usuarios from '../ui/Usuarios';
+import { FirebaseContext } from '../../firebase'; // Contexto de Firebase
 
-const Configuraciones = () => {
-    const { auth } = useContext(FirebaseContext); // Asegúrate de que 'auth' esté disponible en el contexto
-    const navigate = useNavigate();
 
-    const handleLogout = async () => {
-        try {
-            if (auth) {
-                await auth.signOut(); // Llama a 'signOut' si 'auth' está disponible
-                navigate('/login'); // Redirige al login después de cerrar sesión
-            } else {
-                console.error('Error: auth no está definido');
-            }
-        } catch (error) {
-            console.error("Error al cerrar sesión:", error);
-        }
-    };
+export default function Configuraciones() {
+  const { auth } = useContext(FirebaseContext);
 
-    return (
-        <div className="flex flex-col items-center justify-center h-screen">
-            <h1 className="text-2xl font-bold mb-6">Configuraciones</h1>
-            <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-300"
-            >
-                Cerrar Sesión
-            </button>
-        </div>
-    );
-};
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      alert("Sesión cerrada con éxito");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
 
-export default Configuraciones;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col items-center justify-center min-h-screen p-4"
+    >
+      <h1 className="text-3xl font-bold mb-8 text-gray-800">Configuraciones</h1>
+      <motion.div
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="mb-8"
+      >
+      <Button
+        label="Cerrar Sesión"
+        icon="pi pi-sign-out"
+        onClick={handleLogout}
+        className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out mt-4"
+      />
+       </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="w-full max-w-4xl"
+      >
+        <Usuarios />
+      </motion.div>
+    </motion.div>
+  );
+}
