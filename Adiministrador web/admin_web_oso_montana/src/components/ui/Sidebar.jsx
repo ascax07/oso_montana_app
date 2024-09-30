@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Utensils,  Grid, DollarSign, ChartArea , HandHelping, Settings } from "lucide-react";
+import { Utensils,  Grid, DollarSign, ChartArea , HandHelping, Settings, UserCog2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 
@@ -12,6 +12,7 @@ export default function Sidebar() {
     { to: "/mesas", name: "Mesas", icon: <Grid className="w-6 h-6" /> },
     { to: "/ingresos", name: "Ingresos", icon: <DollarSign className="w-6 h-6" /> },
     { to: "/graficas", name: "Graficas", icon: <ChartArea className="w-6 h-6" /> },
+    { to: "/gestion-usuarios", name: "Gestion usuarios", icon: <UserCog2 className="w-6 h-6" /> },
     { to: "/configuraciones", name: "Configuraciones", icon: <Settings className="w-6 h-6" /> },
 
   ];

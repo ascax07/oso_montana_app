@@ -1,54 +1,52 @@
-import React, { useState, useContext } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Coffee, Lock, Mail, Eye, EyeOff, AlertCircle } from "lucide-react";
-import { FirebaseContext } from "../../firebase";
-import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import oso_montana_logo from "../../assets/oso_montana_logo.png"; // Ajusta la ruta según la ubicación de tu componente
+
+import React, { useState, useContext } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Coffee, Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { FirebaseContext } from '../../firebase'
+import { useNavigate } from 'react-router-dom'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import oso_montana_logo from '../../assets/oso_montana_logo.png'; // Ajusta la ruta según la ubicación de tu componente
+
 
 export default function Component() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { auth, db } = useContext(FirebaseContext);
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const { auth, db } = useContext(FirebaseContext)
+  const navigate = useNavigate()
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-      const docRef = doc(db, "usuarios", user.uid);
-      const docSnap = await getDoc(docRef);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+      const docRef = doc(db, "usuarios", user.uid)
+      const docSnap = await getDoc(docRef)
       if (docSnap.exists()) {
-        const rol = docSnap.data().rol;
+        const rol = docSnap.data().rol
         if (rol === "administrador") {
-          navigate("/");
+          navigate('/')
         } else {
-          setError("No tienes permiso para acceder a esta página.");
-          await auth.signOut();
+          setError("No tienes permiso para acceder a esta página.")
+          await auth.signOut()
         }
       } else {
-        setError("Usuario no encontrado en la base de datos.");
-        await auth.signOut();
+        setError("Usuario no encontrado en la base de datos.")
+        await auth.signOut()
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.message)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const togglePasswordVisibility = () => setShowPassword(!showPassword)
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300">
@@ -59,29 +57,16 @@ export default function Component() {
         className="bg-gray-100 rounded-3xl shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff] p-12 max-w-md w-full space-y-8"
       >
         <div className="text-center">
-          <motion.div
+        <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{
-              delay: 0.2,
-              type: "spring",
-              stiffness: 260,
-              damping: 20,
-            }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
             className="bg-[#902a35] p-6 rounded-full inline-block shadow-[inset_5px_5px_10px_#902a35,inset_-5px_-5px_10px_#902a35]"
-          >
-            <img
-              src={oso_montana_logo}
-              alt="Coffee"
-              className="h-20 w-20 rounded-full"
-            />
+            >
+            <img src={oso_montana_logo} alt="Coffee" className="h-20 w-20 rounded-full" />
           </motion.div>
-          <h2 className="mt-6 text-4xl font-extrabold text-gray-900">
-            Oso de la montaña{" "}
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Inicia sesión como administrador{" "}
-          </p>
+          <h2 className="mt-6 text-4xl font-extrabold text-gray-900">Oso de  la montaña </h2>
+          <p className="mt-2 text-sm text-gray-600">Inicia sesión  como administrador </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md -space-y-px">
@@ -150,60 +135,39 @@ export default function Component() {
                 type="checkbox"
                 className="h-4 w-4 text-[#853030] focus:ring-[#853030] border-gray-300 rounded shadow-[inset_1px_1px_2px_#bebebe,inset_-1px_-1px_2px_#ffffff]"
               />
-              <label
-                htmlFor="remember-me"
-                className="ml-2 block text-sm text-gray-900"
-              >
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                 Recuérdame
               </label>
             </div>
 
             <div className="text-sm">
-              <a
-                href="#"
-                className="font-medium text-[#853030] hover:text-[#ff9966] transition duration-300 ease-in-out"
-              >
+              <a href="#" className="font-medium text-[#853030] hover:text-[#ff9966] transition duration-300 ease-in-out">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
           </div>
 
           <div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              disabled={isLoading}
-              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                isLoading ? "bg-gray-400" : "bg-[#902a35]"
-              } hover:bg-[#902a35] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#902a35] transition duration-300 ease-in-out transform hover:scale-105 shadow-[5px_5px_10px_#bebebe,-5px_-5px_10px_#ffffff]`}
-            >
-              {isLoading ? (
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              ) : (
-                "Iniciar Sesión"
-              )}
-            </motion.button>
-          </div>
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    type="submit"
+    disabled={isLoading}
+    className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
+      isLoading ? 'bg-gray-400' : 'bg-[#902a35]'
+    } hover:bg-[#902a35] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#902a35] transition duration-300 ease-in-out transform hover:scale-105 shadow-[5px_5px_10px_#bebebe,-5px_-5px_10px_#ffffff]`}
+  >
+    {isLoading ? (
+      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    ) : (
+      'Iniciar Sesión'
+    )}
+  </motion.button>
+</div>
+
         </form>
         <AnimatePresence>
           {error && (
@@ -227,5 +191,5 @@ export default function Component() {
         </div>
       </motion.div>
     </div>
-  );
+  )
 }

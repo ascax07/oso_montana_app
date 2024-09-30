@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
@@ -7,9 +7,9 @@ import { addDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { Toast } from 'primereact/toast';
-import { Button } from 'primereact/button';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const MAX_FILE_SIZE_MB = 2; // Tamaño máximo del archivo en MB
+const MAX_FILE_SIZE_MB = 2;
 
 const NuevoPlatillo = () => {
   const [subiendo, setSubiendo] = useState(false);
@@ -27,6 +27,12 @@ const NuevoPlatillo = () => {
   const handleUploadError = (error) => {
     setSubiendo(false);
     console.error(error);
+    toast.current.show({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Hubo un problema al subir la imagen.',
+      life: 3000
+    });
   };
 
   const handleUploadSuccess = async (filename) => {
@@ -35,6 +41,12 @@ const NuevoPlatillo = () => {
       setUrlimagen(url);
       setSubiendo(false);
       formik.setFieldValue('imagen', url);
+      toast.current.show({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: 'Imagen subida correctamente.',
+        life: 3000
+      });
     } catch (error) {
       handleUploadError(error);
     }
@@ -49,13 +61,23 @@ const NuevoPlatillo = () => {
     
     if (file) {
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        alert('La imagen debe ser menor de 2MB.');
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Advertencia',
+          detail: 'La imagen debe ser menor de 1MB.',
+          life: 3000
+        });
         return;
       }
 
       const validTypes = ['image/jpeg', 'image/png'];
       if (!validTypes.includes(file.type)) {
-        alert('Solo se permiten archivos JPG o PNG.');
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Advertencia',
+          detail: 'Solo se permiten archivos JPG o PNG.',
+          life: 3000
+        });
         return;
       }
 
@@ -80,6 +102,11 @@ const NuevoPlatillo = () => {
     }
   };
 
+  const handleRemoveImage = () => {
+    setUrlimagen('');
+    formik.setFieldValue('imagen', '');
+  };
+
   const formik = useFormik({
     initialValues: {
       nombre: '',
@@ -89,10 +116,10 @@ const NuevoPlatillo = () => {
       imagen: ''
     },
     validationSchema: Yup.object({
-      nombre: Yup.string().min(3, 'Los platillos deben tener al menos 3 caracteres.').required('El nombre del platillo es obligatorio.'),
-      precio: Yup.number().min(1, 'Debes agregar un número.').required('El precio es obligatorio.'),
+      nombre: Yup.string().min(3, 'El nombre debe tener al menos 3 caracteres.').required('El nombre del platillo es obligatorio.'),
+      precio: Yup.number().min(1, 'El precio debe ser mayor a 0.').required('El precio es obligatorio.'),
       categoria: Yup.string().required('La categoría es obligatoria.'),
-      descripcion: Yup.string().min(10, 'La descripción debe ser más larga.').required('La descripción es obligatoria.'),
+      descripcion: Yup.string().min(10, 'La descripción debe tener al menos 10 caracteres.').required('La descripción es obligatoria.'),
       imagen: Yup.string().required('La imagen es obligatoria.')
     }),
     onSubmit: async (platillo) => {
@@ -105,325 +132,317 @@ const NuevoPlatillo = () => {
         message: '¿Estás seguro de que quieres agregar este platillo?',
         header: 'Confirmación',
         icon: 'pi pi-exclamation-triangle',
-        defaultFocus: 'accept',
-        acceptClassName: 'p-button p-button-success bg-green-500 text-white hover:bg-green-600 border-none rounded-lg px-6 py-3 transition duration-300 ease-in-out mx-2',
-        rejectClassName: 'p-button p-button-secondary bg-gray-500 text-white hover:bg-gray-600 border-none rounded-lg px-6 py-3 transition duration-300 ease-in-out mx-2',
         accept: async () => {
-            try {
-                formik.values.existencia = true;
-                formik.values.imagen = urlimagen;
-                await addDoc(collection(db, 'productos'), formik.values);
-                toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Platillo agregado con éxito.', life: 3000 });
-    
-                // Esperar a que el toast se muestre antes de navegar
-                setTimeout(() => {
-                    navigate('/menu');
-                }, 100); // Debe coincidir con la duración del toast
-            } catch (error) {
-                console.error(error);
-                toast.current.show({ severity: 'error', summary: 'Error', detail: 'Hubo un error al agregar el platillo.', life: 3000 });
-            }
+          try {
+            platillo.existencia = true;
+            platillo.imagen = urlimagen;
+            await addDoc(collection(db, 'productos'), platillo);
+            toast.current.show({
+              severity: 'success',
+              summary: 'Éxito',
+              detail: 'Platillo agregado correctamente.',
+              life: 3000
+            });
+            setTimeout(() => {
+              navigate('/menu');
+            }, 3000);
+          } catch (error) {
+            console.error(error);
+            toast.current.show({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Hubo un error al agregar el platillo.',
+              life: 3000
+            });
+          }
         },
         reject: () => {
-            toast.current.show({ severity: 'warn', summary: 'Rechazado', detail: 'Operación cancelada.', life: 3000 });
+          toast.current.show({
+            severity: 'info',
+            summary: 'Cancelado',
+            detail: 'Has cancelado la adición del platillo.',
+            life: 3000
+          });
         }
-    });
-    
+      });
     }
   });
+
+  useEffect(() => {
+    if (errorGlobal) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: errorGlobal,
+        life: 3000
+      });
+    }
+  }, [errorGlobal]);
+
   return (
-    <>
-     <Toast ref={toast} />
-     <ConfirmDialog />
-      <h1 className="text-3xl font-light mb-4">Agregar platillos</h1>
-      <div className="flex justify-center mt-10">
-        <div className="w-full max-w-3xl">
-          <form onSubmit={formik.handleSubmit}>
-            {/* Campos de formulario */}
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nombre">
-                Nombre
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="nombre"
-                type="text"
-                {...formik.getFieldProps('nombre')}
-              />
-              {formik.touched.nombre && formik.errors.nombre && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                  <p className="font-bold">Hubo un error:</p>
-                  <p>{formik.errors.nombre}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="precio">
-                Precio
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="precio"
-                type="number"
-                {...formik.getFieldProps('precio')}
-              />
-              {formik.touched.precio && formik.errors.precio && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                  <p className="font-bold">Hubo un error:</p>
-                  <p>{formik.errors.precio}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="categoria">Categoría</label>
-              <select
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="categoria"
-                {...formik.getFieldProps('categoria')}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 py-12 px-4 sm:px-6 lg:px-8"
+    >
+      <Toast ref={toast} />
+      <ConfirmDialog />
+      <motion.div
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="max-w-3xl mx-auto bg-white shadow-2xl rounded-3xl overflow-hidden"
+      >
+        <div className="px-4 py-5 sm:p-6">
+          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-8">Agregar Nuevo Platillo</h2>
+          <form onSubmit={formik.handleSubmit} className="space-y-8">
+            <AnimatePresence>
+              {/* Nombre del platillo */}
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100 }}
               >
-                <option value="">-- Seleccione --</option>
-                <option value="desayuno">Desayuno</option>
-                <option value="comida">Comida</option>
-                <option value="cena">Cena</option>
-                <option value="postre">Postre</option>
-                <option value="bebida">Bebida</option>
-              </select>
-              {formik.touched.categoria && formik.errors.categoria && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                  <p className="font-bold">Hubo un error:</p>
-                  <p>{formik.errors.categoria}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="descripcion">
-                Descripción
-              </label>
-              <textarea
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="descripcion"
-                rows="4"
-                {...formik.getFieldProps('descripcion')}
-              />
-              {formik.touched.descripcion && formik.errors.descripcion && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                  <p className="font-bold">Hubo un error:</p>
-                  <p>{formik.errors.descripcion}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imagen">
-                Imagen
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="imagen"
-                type="file"
-                accept="image/jpeg, image/png"
-                onChange={(event) => {
-                  formik.setFieldValue('imagen', event.currentTarget.files[0]);
-                  handleFileUpload(event); // Llama a la función de subida cuando se selecciona un archivo
-                }}
-              />
-              {subiendo && (
-                <div className="loader-container mt-2">
-                  <div className="loader"></div>
-                </div>
-              )}
-              {/* Muestra la imagen subida y establece su tamaño */}
-              {urlimagen && (
-                <div className="mt-2">
-                  <img
-                    src={urlimagen}
-                    alt="Imagen subida"
-                    style={{ maxWidth: '100%', maxHeight: '200px' }}
+                <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
+                  Nombre del platillo
+                </label>
+                <div className="mt-1">
+                  <input
+                    type="text"
+                    name="nombre"
+                    id="nombre"
+                    {...formik.getFieldProps('nombre')}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    placeholder="Ej. Café Latte"
                   />
                 </div>
-              )}
-              {formik.touched.imagen && formik.errors.imagen && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5" role="alert">
-                  <p className="font-bold">Hubo un error:</p>
-                  <p>{formik.errors.imagen}</p>
-                </div>
-              )}
-            </div>
+                {formik.touched.nombre && formik.errors.nombre ? (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-2 text-sm text-red-600"
+                  >
+                    {formik.errors.nombre}
+                  </motion.p>
+                ) : null}
+              </motion.div>
 
-            <div className="flex items-center justify-between">
-            <button type="submit" className="btn">
-              <span data-text="Agregar Platillo">Agregar Platillo</span>
-            </button>
-            </div>
+              {/* Precio */}
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100, delay: 0.1 }}
+              >
+                <label htmlFor="precio" className="block text-sm font-medium text-gray-700">
+                  Precio
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">$</span>
+                  </div>
+                  <input
+                    type="number"
+                    name="precio"
+                    id="precio"
+                    {...formik.getFieldProps('precio')}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    placeholder="0.000"
+                    aria-describedby="price-currency"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm" id="price-currency">
+                      COP
+                    </span>
+                  </div>
+                </div>
+                {formik.touched.precio && formik.errors.precio ? (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-2 text-sm text-red-600"
+                  >
+                    {formik.errors.precio}
+                  </motion.p>
+                ) : null}
+              </motion.div>
+
+              {/* Categoría */}
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100, delay: 0.2 }}
+              >
+                <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">
+                  Categoría
+                </label>
+                <select
+                  id="categoria"
+                  name="categoria"
+                  {...formik.getFieldProps('categoria')}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                >
+                  <option value="">Selecciona una categoría</option>
+                  <option value="cafe_caliente">cafe caliente</option>
+                  <option value="cafe_frio">cafe frio</option>
+                  <option value="helados">helados</option>
+                  <option value="bebida">Bebida</option>
+                  <option value="postre">Postre</option>
+                  <option value="merienda">merienda</option>
+
+                </select>
+                {formik.touched.categoria && formik.errors.categoria ? (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-2 text-sm text-red-600"
+                  >
+                    {formik.errors.categoria}
+                  </motion.p>
+                ) : null}
+              </motion.div>
+
+              {/* Descripción */}
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100, delay: 0.3 }}
+              >
+                <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
+                  Descripción
+                </label>
+                <div className="mt-1">
+                  <textarea
+                    id="descripcion"
+                    name="descripcion"
+                    rows={3}
+                    {...formik.getFieldProps('descripcion')}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    placeholder="Describe el platillo..."
+                  />
+                </div>
+                {formik.touched.descripcion && formik.errors.descripcion ? (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-2 text-sm text-red-600"
+                  >
+                    {formik.errors.descripcion}
+                  </motion.p>
+                ) : null}
+              </motion.div>
+
+              {/* Imagen */}
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100, delay: 0.4 }}
+              >
+                <label className="block text-sm font-medium text-gray-700">Imagen del platillo</label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  {!urlimagen ? (
+                    <div className="space-y-1 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="imagen"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-red-600 hover:text-red-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-red-500"
+                        >
+                          <span>Sube una imagen</span>
+                          <input
+                            id="imagen"
+                            name="imagen"
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={handleFileUpload}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG hasta 1MB</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 text-center">
+                      <img
+                        src={urlimagen}
+                        alt="Vista previa"
+                        className="mx-auto h-32 w-auto object-cover rounded-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="mt-2 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        Quitar imagen
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {subiendo && (
+                  <motion.div
+                    className="mt-2 h-2 bg-red-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progreso}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                )}
+                {formik.touched.imagen && formik.errors.imagen && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-2 text-sm text-red-600"
+                  >
+                    {formik.errors.imagen}
+                  </motion.p>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Botón de envío */}
+            <motion.div
+              className="pt-5"
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="flex justify-end">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="submit"
+                  className="ml-3 inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-lg font-medium rounded-full text-white bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 ease-in-out transform hover:-translate-y-1"
+                >
+                  Agregar Platillo
+                </motion.button>
+              </div>
+            </motion.div>
           </form>
         </div>
-      </div>
-      <style jsx>{`
-    .loader-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .loader {
-      font-weight: bold;
-      font-family: monospace;
-      display: inline-grid;
-      font-size: 30px;
-    }
-    .loader:before,
-    .loader:after {
-      content: "subiendo imagen....";
-      grid-area: 1/1;
-      -webkit-mask-size: 1.5ch 100%, 100% 100%;
-      -webkit-mask-repeat: no-repeat;
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      animation: l36-1 1s infinite;
-    }
-    .loader:before {
-      -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-    }
-    .loader:after {
-      -webkit-mask-image: linear-gradient(#000 0 0);
-      animation: l36-1 1s infinite, l36-2 0.2s infinite cubic-bezier(0.5, 200, 0.5, -200);
-    }
-    @keyframes l36-1 {
-      0% {
-        -webkit-mask-position: 0 0, 0 0;
-      }
-      20% {
-        -webkit-mask-position: 0.5ch 0, 0 0;
-      }
-      40% {
-        -webkit-mask-position: 100% 0, 0 0;
-      }
-      60% {
-        -webkit-mask-position: 4.5ch 0, 0 0;
-      }
-      80% {
-        -webkit-mask-position: 6.5ch 0, 0 0;
-      }
-      100% {
-        -webkit-mask-position: 2.5ch 0, 0 0;
-      }
-    }
-    @keyframes l36-2 {
-      100% {
-        transform: translateY(0.2px);
-      }
-    }
-    .notification {
-      display: inline-block;
-      font-size: 15px;
-      padding: 0.7em 2.7em;
-      letter-spacing: 0.06em;
-      position: relative;
-      font-family: inherit;
-      border-radius: 0.6em;
-      overflow: hidden;
-      line-height: 1.4em;
-      border: 2px solid #000000;
-      background: linear-gradient(to right, rgba(27, 253, 156, 0.1) 1%, transparent 40%, transparent 60%, rgba(27, 253, 156, 0.1) 100%);
-      color: #000000;
-      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4), 0 0 9px 3px rgba(0, 0, 0, 0.1);
-      animation: notification-animation 2s linear infinite;
-    }
-    @keyframes notification-animation {
-      0% {
-        background-position: 0% 50%;
-      }
-      100% {
-        background-position: 100% 50%;
-      }
-    }
-    .btn {
-      background: transparent;
-      border: 1px solid #141414;
-      outline: none;
-      padding: 12px 80px;
-      height: 50px;
-      border-radius: 100px;
-      overflow: hidden;
-      transform: scaleX(1);
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0, 1);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .btn:hover {
-      animation: animate-scaleX 0.6s cubic-bezier(0.4, 0, 0, 1);
-      background: transparent;
-    }
-
-    .btn::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      background: black;
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0, 1),
-        border-radius 0.5s cubic-bezier(0.4, 0, 0, 1);
-      width: 100%;
-      height: 100%;
-      border-radius: 50% 50% 0 0;
-      transform: translateY(100%);
-    }
-
-    .btn:hover::after {
-      transform: translateY(0%);
-      border-radius: 0;
-    }
-
-    .btn span {
-      font-size: 20px;
-      font-weight: 500;
-      overflow: hidden;
-      position: relative;
-      color: black;
-    }
-
-    .btn span:after {
-      width: 100%;
-      height: 100%;
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0, 1);
-      content: attr(data-text);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: absolute;
-      left: 50%;
-      bottom: 0;
-      z-index: 1;
-      transform: translate(-50%, 100%);
-      color: white;
-    }
-    .btn:hover span:after {
-      transform: translate(-50%, 0);
-    }
-
-    .btn:focus {
-      outline: none;
-    }
-
-    @keyframes animate-scaleX {
-      0% {
-        transform: scaleX(1);
-      }
-      50% {
-        transform: scaleX(1.05);
-      }
-      100% {
-        transform: scaleX(1);
-      }
-    }
-  `}</style>
-    </>
+      </motion.div>
+    </motion.div>
   );
 };
 

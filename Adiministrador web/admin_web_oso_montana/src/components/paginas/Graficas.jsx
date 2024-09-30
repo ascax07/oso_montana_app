@@ -1,90 +1,174 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FirebaseContext } from '../../firebase'; // Se importa el contexto de Firebase
+import { FirebaseContext } from '../../firebase';
 import Grafica from '../ui/Grafica';
-import GraficaAno from '../ui/GraficaAno'; // Importa el nuevo componente
-import * as XLSX from 'xlsx';
-import { collection, where, onSnapshot } from 'firebase/firestore'; // Asegúrate de importar los métodos correctos de Firestore
+import GraficaAno from '../ui/GraficaAno';
+import { collection, where, onSnapshot, query } from 'firebase/firestore';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import logo from '../../assets/oso_montana_logo.png';
+import img_borde1 from '../../assets/borde1.png';
+import img_borde2 from '../../assets/borde2.png';
 
 const Graficas = () => {
-    const { db } = useContext(FirebaseContext); // Se obtiene `db` desde el contexto de Firebase
+    const { db } = useContext(FirebaseContext);
     const [datos, setDatos] = useState([]);
-    const [mes, setMes] = useState(new Date().getMonth() + 1); // Mes actual (1-12)
-    const [ano, setAno] = useState(new Date().getFullYear()); // Año actual
-    const [mensaje, setMensaje] = useState(''); // Estado para manejar el mensaje de ausencia de datos
-    const [vista, setVista] = useState('mensual'); // Estado para controlar la vista
+    const [mes, setMes] = useState(new Date().getMonth() + 1);
+    const [ano, setAno] = useState(new Date().getFullYear());
+    const [mensaje, setMensaje] = useState('');
+    const [vista, setVista] = useState('mensual');
 
     useEffect(() => {
-        if (!db) return; // Verificar si `db` está disponible
+        if (!db) return;
 
-        const unsubscribe = onSnapshot(
+        const q = query(
             collection(db, 'ordenes'),
-            where('completado', '==', true), // Filtramos solo las órdenes completadas
-            (snapshot) => {
-                const ordenes = snapshot.docs.map(doc => doc.data());
-
-                // Filtrar por el mes y año seleccionados
-                const filtrado = ordenes.filter(orden => {
-                    const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null; // Verificar si existe fecha_ingreso
-                    if (fechaIngreso) {
-                        return (fechaIngreso.getMonth() + 1 === mes) && (fechaIngreso.getFullYear() === ano);
-                    }
-                    return false; // Si no tiene fecha_ingreso, no lo incluimos en el filtrado
-                });
-
-                // Agrupar las órdenes por fecha y sumar el total de ventas por día
-                const agrupadoPorFecha = filtrado.reduce((acc, orden) => {
-                    const fecha = orden.fecha_ingreso.toDate().toLocaleDateString('es-ES');
-                    if (!acc[fecha]) {
-                        acc[fecha] = 0; // Inicializa el total en 0 si no existe la fecha
-                    }
-                    acc[fecha] += orden.total; // Sumar el total de la orden al total del día
-                    return acc;
-                }, {});
-
-                // Convertir el objeto agrupado en un array de datos para la gráfica
-                const datosAgrupados = Object.keys(agrupadoPorFecha).map(fecha => ({
-                    fecha,
-                    total: agrupadoPorFecha[fecha],
-                }));
-
-                setDatos(datosAgrupados);
-
-                // Mostrar mensaje si no hay datos
-                if (datosAgrupados.length === 0) {
-                    setMensaje(`No se han encontrado ingresos para ${mes}/${ano}`);
-                } else {
-                    setMensaje('');
-                }
-            }
+            where('completado', '==', true)
         );
 
-        // Cleanup function to unsubscribe from the snapshot listener
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const ordenes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            const filtrado = ordenes.filter(orden => {
+                const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null;
+                if (fechaIngreso) {
+                    return (fechaIngreso.getMonth() + 1 === mes) && (fechaIngreso.getFullYear() === ano);
+                }
+                return false;
+            });
+
+            setDatos(filtrado);
+
+            if (filtrado.length === 0) {
+                setMensaje(`No se han encontrado ingresos para ${mes}/${ano}`);
+            } else {
+                setMensaje('');
+            }
+        });
+
         return () => unsubscribe();
-    }, [mes, ano, db]); // Actualizar cuando cambie el mes, año o `db`
+    }, [mes, ano, db]);
 
-    // Función para exportar datos a un archivo Excel
-    const generarExcel = () => {
-        const wb = XLSX.utils.book_new();
+    const generarPDF = () => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
 
-        // Creamos la hoja de trabajo
-        const ws = XLSX.utils.aoa_to_sheet([
-            ['Ingresos Oso de la Montaña'], // Encabezado principal
-            [`Mes: ${mes}`, `Año: ${ano}`], // Mes y Año
-            [], // Espacio vacío
-            ['Fecha', 'Total'], // Títulos de columnas
-            ...datos.map(dato => [dato.fecha, dato.total]), // Datos de la tabla
-            [], // Espacio vacío
-            ['Total de Ventas', { t: 'n', f: `SUM(B5:B${datos.length + 4})` }] // Total de ventas
-        ]);
+        const addDecorativeBorders = () => {
+            doc.addImage(img_borde1, 'PNG', 0, 0, pageWidth, 40);
+            doc.addImage(img_borde2, 'PNG', 0, pageHeight - 20, pageWidth, 20);
+        };
 
-        // Ajustar el ancho de las columnas
-        ws['!cols'] = [{ wch: 15 }, { wch: 10 }]; // Ajustar ancho de columnas
+        addDecorativeBorders();
 
-        // Agregar la hoja de trabajo al libro
-        XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
+        doc.addImage(logo, 'PNG', 15, 40, 30, 30);
 
-        // Guardar el archivo
-        XLSX.writeFile(wb, `Ingresos_${mes}_${ano}.xlsx`);
+        const totalIngresos = datos.reduce((sum, dato) => {
+            if (!dato.orden || !Array.isArray(dato.orden)) {
+                return sum;
+            }
+            const subtotal = dato.orden.reduce((s, item) => s + (item.precio * item.cantidad), 0);
+            return sum + subtotal;
+        }, 0);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(24);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Resumen Ejecutivo', pageWidth / 2, 50, { align: 'center' });
+
+        doc.setFontSize(18);
+        doc.setTextColor(51, 51, 51);
+        doc.text('OSO DE LA MONTAÑA', pageWidth / 2, 60, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+        doc.text('osodelamontana@gmail.com', pageWidth / 2, 68, { align: 'center' });
+
+        doc.setFontSize(12);
+        const textoIngresos = `Durante el mes ${mes}/${ano} el restaurante "Oso de la Montaña" generó un total de $${totalIngresos.toLocaleString('es-CO')} COP en ingresos.`;
+        doc.text(textoIngresos, 14, 80, { maxWidth: pageWidth - 28 });
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text('Detalle de Ventas', pageWidth / 2, 100, { align: 'center' });
+
+        const tableColumn = [
+            'Fecha y Hora de Ingreso',
+            'Mesa',
+            'Método de Pago',
+            'Orden',
+            'SUBTOTAL',
+            'Impuesto al Consumo (8%)',
+            'TOTAL PAGADO'
+        ];
+
+        const tableRows = datos.map(dato => {
+            const fechaIngreso = dato.fecha_ingreso ? dato.fecha_ingreso.toDate().toLocaleString() : '';
+            const mesa = dato.mesa || 'N/A';
+            const metodoPago = dato.tipoPago || 'Desconocido';
+
+            // Mostrar productos de la orden con sus respectivos precios
+            const orden = dato.orden.map(item => `${item.nombre} = $${item.precio.toLocaleString('es-CO')}`).join(', ');
+            const subtotal = dato.orden.reduce((s, item) => s + (item.precio * item.cantidad), 0);
+            const impuesto = subtotal * 0.08;
+            const total = subtotal + impuesto;
+
+            return [
+                fechaIngreso,
+                mesa,
+                metodoPago,
+                orden,
+                `$${subtotal.toLocaleString('es-CO')}`,
+                `$${impuesto.toLocaleString('es-CO')}`,
+                `$${total.toLocaleString('es-CO')}`
+            ];
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 110,
+            theme: 'grid',
+            styles: { fontSize: 8, font: "helvetica" },
+            headStyles: { fillColor: [255, 200, 200], textColor: [0, 0, 0], fontStyle: "bold" }
+        });
+
+        doc.addPage();
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text('Análisis de Ventas', 14, 20);
+
+        const productoMasVendido = calcularProductoMasVendido(datos);
+        const metodoMasUtilizado = calcularMetodoMasUtilizado(datos);
+
+        doc.setFontSize(12);
+        doc.text(`• Producto más vendido: ${productoMasVendido}`, 14, 40);
+        doc.text(`• Método de pago más utilizado: ${metodoMasUtilizado}`, 14, 50);
+
+        doc.save(`Reporte_Ingresos_${mes}_${ano}.pdf`);
+    };
+
+    const calcularProductoMasVendido = (datos) => {
+        const conteoProductos = {};
+
+        datos.forEach(dato => {
+            dato.orden.forEach(item => {
+                conteoProductos[item.nombre] = (conteoProductos[item.nombre] || 0) + item.cantidad;
+            });
+        });
+
+        const productosOrdenados = Object.entries(conteoProductos).sort((a, b) => b[1] - a[1]);
+        return productosOrdenados[0] ? productosOrdenados[0][0] : 'N/A';
+    };
+
+    const calcularMetodoMasUtilizado = (datos) => {
+        const conteoMetodos = {};
+
+        datos.forEach(dato => {
+            const metodoPago = dato.tipoPago;
+            conteoMetodos[metodoPago] = (conteoMetodos[metodoPago] || 0) + 1;
+        });
+
+        const metodosOrdenados = Object.entries(conteoMetodos).sort((a, b) => b[1] - a[1]);
+        return metodosOrdenados[0] ? metodosOrdenados[0][0] : 'N/A';
     };
 
     return (
@@ -103,6 +187,12 @@ const Graficas = () => {
                     onClick={() => setVista('anual')}
                 >
                     Ver Gráfica Anual
+                </button>
+                <button
+                    className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
+                    onClick={generarPDF}
+                >
+                    Generar PDF
                 </button>
             </div>
 
@@ -130,23 +220,16 @@ const Graficas = () => {
                                 <option key={año} value={año}>{año}</option>
                             ))}
                         </select>
-
-                        <button
-                            className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
-                            onClick={generarExcel}
-                        >
-                            Generar Excel
-                        </button>
                     </div>
 
                     {mensaje ? (
-                        <p>{mensaje}</p> // Muestra el mensaje si no hay datos
+                        <p>{mensaje}</p>
                     ) : (
-                        <Grafica datos={datos} /> // Muestra la gráfica si hay datos
+                        <Grafica datos={datos} />
                     )}
                 </>
             ) : (
-                <GraficaAno ano={ano} /> // Muestra la gráfica anual
+                <GraficaAno ano={ano} />
             )}
         </div>
     );

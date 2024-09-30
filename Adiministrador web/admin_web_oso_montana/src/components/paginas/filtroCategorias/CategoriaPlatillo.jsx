@@ -1,62 +1,71 @@
 import React, { useState } from 'react';
-import { Button } from 'primereact/button';
-import 'primereact/resources/primereact.min.css';          // Estilos de PrimeReact
-import 'primeicons/primeicons.css';                        // Estilos de PrimeIcons
+import { Tag } from 'primereact/tag'; // Importando Tag de PrimeReact
 
 const CategoriaPlatillo = ({ filtrarCategoria }) => {
-    // Estado para el botón seleccionado
+    // State for the selected category and search query
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Función para manejar el clic del botón
-    const handleButtonClick = (category) => {
+    // Function to handle category selection
+    const handleCategoryChange = (e) => {
+        const category = e.target.value;
         setSelectedCategory(category);
-        filtrarCategoria(category);
+        filtrarCategoria(category, searchQuery);
     };
 
-    // Función para obtener las clases del botón basado en la categoría seleccionada
-    const getButtonClasses = (category) => {
-        const baseClasses = 'w-36 h-12 border-2 transition-all ease-in-out duration-300 rounded-lg';
-        const activeClasses = selectedCategory === category ? 'bg-red-800 text-white border-red-600 shadow-lg' : 'bg-black text-white border-black';
-        return `${baseClasses} ${activeClasses} hover:bg-red-800 hover:border-red-500`;
+    // Function to handle search query input
+    const handleSearchChange = (e) => {
+        const query = e.target.value;
+        setSearchQuery(query);
+        filtrarCategoria(selectedCategory, query);
     };
 
     return (
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
+            {/* Search Bar with Tag */}
+            <div className="flex w-full md:w-1/2 items-center">
+                <Tag value="Buscar" className="bg-red-700 text-white px-6 py-3 h-full" />
+                <input
+                    type="text"
+                    placeholder="Buscar platillo..."
+                    className="w-full px-4 py-2 border-2 border-gray-300 focus:outline-none focus:border-red-800 transition-colors duration-300 rounded-r-lg"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                />
+            </div>
 
-
-        
-        <div className="flex flex-wrap justify-center gap-4 mb-4">
-               <Button
-                label="Todos"
-                // icon="pi pi-list" // Icono para mostrar todos
-                className={getButtonClasses('')}
-                onClick={() => handleButtonClick('')}
-            />
-            <Button
-                label="Comida"
-                // icon="pi pi-utensils" // Icono para Comida
-                className={getButtonClasses('comida')}
-                onClick={() => handleButtonClick('comida')}
-                raised
-            />
-            
-            <Button
-                label="Cena"
-                // icon="pi pi-clock" // Icono para Cena
-                className={getButtonClasses('cena')}
-                onClick={() => handleButtonClick('cena')}
-            />
-            <Button
-                label="Postre"
-                // icon="pi pi-ice-cream" // Icono para Postre
-                className={getButtonClasses('postre')}
-                onClick={() => handleButtonClick('postre')}
-            />
-            <Button
-                label="Bebida"
-                // icon="pi pi-glass" // Icono para Bebida
-                className={getButtonClasses('bebida')}
-                onClick={() => handleButtonClick('bebida')}
-            />
+            {/* Category Dropdown */}
+            <div className="relative inline-block w-full md:w-1/4">
+                <select
+                    value={selectedCategory}
+                    onChange={handleCategoryChange}
+                    className="w-full px-4 py-2 border-2 border-gray-300 focus:outline-none focus:border-red-800 transition-colors duration-300 rounded-lg appearance-none bg-white"
+                >
+                    <option value="">Selecciona una categoría</option>
+                    <option value="cafe_caliente">cafe caliente</option>
+                    <option value="cafe_frio">cafe frio</option>
+                    <option value="helados">helados</option>
+                    <option value="bebida">Bebida</option>
+                    <option value="postre">Postre</option>
+                    <option value="merienda">merienda</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg
+                        className="w-4 h-4 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                        ></path>
+                    </svg>
+                </div>
+            </div>
         </div>
     );
 };

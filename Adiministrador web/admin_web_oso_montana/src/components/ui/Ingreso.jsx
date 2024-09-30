@@ -4,6 +4,8 @@ import { Column } from 'primereact/column';
 import { Timestamp } from 'firebase/firestore'; // Importa Timestamp para formatear la fecha
 import { Tag } from 'primereact/tag'; // Para usar el Tag de estado
 
+
+
 const Ingreso = ({ ingreso }) => {
     const formatearFecha = (timestamp) => {
         if (timestamp && timestamp.toDate) { // Verifica que timestamp y toDate estén definidos
