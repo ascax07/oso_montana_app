@@ -2,25 +2,28 @@ import React, { useState, useEffect, useContext } from 'react';
 import { FirebaseContext } from '../../firebase'; // Se importa el contexto de Firebase
 import { Chart } from 'primereact/chart';
 import * as XLSX from 'xlsx'; // Importar XLSX para generar el archivo Excel
+import { collection, where, onSnapshot } from 'firebase/firestore'; // Importar las funciones necesarias de Firestore
 
 const GraficaAno = () => {
-    const { firebase } = useContext(FirebaseContext); // Se obtiene la instancia de Firebase desde el contexto
+    const { db } = useContext(FirebaseContext); // Se obtiene `db` directamente desde el contexto
     const [datos, setDatos] = useState([]);
     const [ano, setAno] = useState(new Date().getFullYear()); // Año actual
     const [mensaje, setMensaje] = useState(''); // Estado para manejar el mensaje de ausencia de datos
 
     useEffect(() => {
-        const unsubscribe = firebase.db
-            .collection('ordenes')
-            .where('completado', '==', true) // Filtramos solo las órdenes completadas
-            .onSnapshot(snapshot => {
+        if (!db) return; // Verificar si `db` está disponible antes de intentar acceder a Firestore
+
+        const unsubscribe = onSnapshot(
+            collection(db, 'ordenes'), // Acceder a la colección 'ordenes'
+            where('completado', '==', true), // Filtrar solo las órdenes completadas
+            (snapshot) => {
                 const ordenes = snapshot.docs.map(doc => doc.data());
 
                 // Filtramos por el año seleccionado
                 const filtrado = ordenes.filter(orden => {
-                    const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null; // Verificamos si existe fecha_ingreso
+                    const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null;
                     if (fechaIngreso) {
-                        return (fechaIngreso.getFullYear() === ano);
+                        return fechaIngreso.getFullYear() === ano;
                     }
                     return false; // Si no tiene fecha_ingreso, no lo incluimos en el filtrado
                 });
@@ -48,11 +51,12 @@ const GraficaAno = () => {
                     setMensaje('');
                 }
                 setDatos(datosAgrupados);
-            });
+            }
+        );
 
         // Cleanup function to unsubscribe from the snapshot listener
         return () => unsubscribe();
-    }, [ano, firebase.db]); // Actualizar cuando cambie el año o la instancia de Firebase
+    }, [ano, db]); // Actualizar cuando cambie el año o `db`
 
     const data = {
         labels: datos.map(dato => `Mes ${dato.mes}`),
@@ -83,32 +87,8 @@ const GraficaAno = () => {
             ['Ventas del Año', totalVentasAno] // Total de ventas del año
         ]);
 
-        // Estilo para el encabezado principal
-        ws['A1'].s = {
-            font: { bold: true, sz: 14 }, // Negrita, tamaño 14
-            alignment: { horizontal: 'center' }, // Centrado
-            fill: { fgColor: { rgb: '00FF00' } } // Color de fondo verde
-        };
-        ws['A2'].s = {
-            fill: { fgColor: { rgb: '00FF00' } } // Color de fondo verde para Año
-        };
-
-        // Estilo para las celdas de título
-        ws['A4'].s = {
-            fill: { fgColor: { rgb: '0000FF' } }, // Fondo azul
-            font: { bold: true }
-        };
-        ws['B4'].s = {
-            fill: { fgColor: { rgb: '0000FF' } }, // Fondo azul
-            font: { bold: true }
-        };
-
         // Ajustar el ancho de las columnas
         ws['!cols'] = [{ wch: 15 }, { wch: 10 }]; // Ajustar ancho de columnas
-
-        // Combinamos celdas para el título principal
-        XLSX.utils.sheet_add_aoa(ws, [['Ingresos por Año']], { origin: 'A1' });
-        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }]; // Unir celdas A1 y B1
 
         // Agregar la hoja de trabajo al libro
         XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');

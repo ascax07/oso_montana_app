@@ -3,9 +3,10 @@ import { FirebaseContext } from '../../firebase'; // Se importa el contexto de F
 import Grafica from '../ui/Grafica';
 import GraficaAno from '../ui/GraficaAno'; // Importa el nuevo componente
 import * as XLSX from 'xlsx';
+import { collection, where, onSnapshot } from 'firebase/firestore'; // Asegúrate de importar los métodos correctos de Firestore
 
 const Graficas = () => {
-    const { firebase } = useContext(FirebaseContext); // Se obtiene la instancia de Firebase desde el contexto
+    const { db } = useContext(FirebaseContext); // Se obtiene `db` desde el contexto de Firebase
     const [datos, setDatos] = useState([]);
     const [mes, setMes] = useState(new Date().getMonth() + 1); // Mes actual (1-12)
     const [ano, setAno] = useState(new Date().getFullYear()); // Año actual
@@ -13,15 +14,17 @@ const Graficas = () => {
     const [vista, setVista] = useState('mensual'); // Estado para controlar la vista
 
     useEffect(() => {
-        const unsubscribe = firebase.db
-            .collection('ordenes')
-            .where('completado', '==', true) // Filtramos solo las órdenes completadas
-            .onSnapshot(snapshot => {
+        if (!db) return; // Verificar si `db` está disponible
+
+        const unsubscribe = onSnapshot(
+            collection(db, 'ordenes'),
+            where('completado', '==', true), // Filtramos solo las órdenes completadas
+            (snapshot) => {
                 const ordenes = snapshot.docs.map(doc => doc.data());
 
-                // Filtramos por el mes y año seleccionados
+                // Filtrar por el mes y año seleccionados
                 const filtrado = ordenes.filter(orden => {
-                    const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null; // Verificamos si existe fecha_ingreso
+                    const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null; // Verificar si existe fecha_ingreso
                     if (fechaIngreso) {
                         return (fechaIngreso.getMonth() + 1 === mes) && (fechaIngreso.getFullYear() === ano);
                     }
@@ -52,11 +55,12 @@ const Graficas = () => {
                 } else {
                     setMensaje('');
                 }
-            });
+            }
+        );
 
         // Cleanup function to unsubscribe from the snapshot listener
         return () => unsubscribe();
-    }, [mes, ano, firebase.db]); // Actualizar cuando cambie el mes, año o la instancia de Firebase
+    }, [mes, ano, db]); // Actualizar cuando cambie el mes, año o `db`
 
     // Función para exportar datos a un archivo Excel
     const generarExcel = () => {
@@ -73,35 +77,8 @@ const Graficas = () => {
             ['Total de Ventas', { t: 'n', f: `SUM(B5:B${datos.length + 4})` }] // Total de ventas
         ]);
 
-        // Estilo para el encabezado principal
-        ws['A1'].s = {
-            font: { bold: true, sz: 14 }, // Negrita, tamaño 14
-            alignment: { horizontal: 'center' }, // Centrado
-            fill: { fgColor: { rgb: '00FF00' } } // Color de fondo verde
-        };
-        ws['A2'].s = {
-            fill: { fgColor: { rgb: '00FF00' } } // Color de fondo verde para Mes/Año
-        };
-        ws['B2'].s = {
-            fill: { fgColor: { rgb: '00FF00' } } // Color de fondo verde para Año
-        };
-
-        // Estilo para las celdas de título
-        ws['A4'].s = {
-            fill: { fgColor: { rgb: '0000FF' } }, // Fondo azul
-            font: { bold: true }
-        };
-        ws['B4'].s = {
-            fill: { fgColor: { rgb: '0000FF' } }, // Fondo azul
-            font: { bold: true }
-        };
-
         // Ajustar el ancho de las columnas
         ws['!cols'] = [{ wch: 15 }, { wch: 10 }]; // Ajustar ancho de columnas
-
-        // Combinamos celdas para el título principal
-        XLSX.utils.sheet_add_aoa(ws, [['Ingresos Oso de la Montaña']], { origin: 'A1' });
-        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }]; // Unir celdas A1 y B1
 
         // Agregar la hoja de trabajo al libro
         XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');

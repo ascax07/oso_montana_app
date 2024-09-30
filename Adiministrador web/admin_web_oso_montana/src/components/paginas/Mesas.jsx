@@ -8,15 +8,20 @@ import CategoriaMesas from '../paginas/filtroCategorias/CategoriaMesas';
 const Mesas = () => {
   const [mesas, guardarMesas] = useState([]);
   const [mesasFiltradas, guardarMesasFiltradas] = useState([]);
-  const { firebase } = useContext(FirebaseContext);
+  const { db } = useContext(FirebaseContext);
+
+
 
   useEffect(() => {
     const obtenerMesas = () => {
-      const unsuscribe = collection(firebase.db, 'mesas');
-      onSnapshot(unsuscribe, manejarSnapshot);
+        if (db) {
+            const mesasCollection = collection(db, 'mesas'); // Usar 'collection' para obtener la referencia
+            onSnapshot(mesasCollection, manejarSnapshot); // Usar 'onSnapshot' con la referencia de la colección
+        }
     };
     obtenerMesas();
-  }, [firebase]);
+}, [db]);
+
 
   function manejarSnapshot(snapshot) {
     const mesas = snapshot.docs.map(doc => {

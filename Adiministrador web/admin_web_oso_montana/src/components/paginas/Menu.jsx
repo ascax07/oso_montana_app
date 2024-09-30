@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { FirebaseContext } from '../../firebase';
+import { collection, onSnapshot } from 'firebase/firestore'; // Importar las funciones correctas
 import Platillo from "../ui/Platillo";
 import CategoriaPlatillo from '../../components/paginas/filtroCategorias/CategoriaPlatillo';
 
@@ -9,24 +10,25 @@ const Menu = () => {
     const [platillos, guardarPlatillos] = useState([]);
     const [platillosFiltrados, guardarPlatillosFiltrados] = useState([]);
 
-    const { firebase } = useContext(FirebaseContext);
+    const { db } = useContext(FirebaseContext);
 
     // Consultar la base de datos al cargar
     useEffect(() => {
         const obtenerPlatillos = () => {
-            firebase.db.collection('productos').onSnapshot(manejarSnapshot);
+            if (db) {
+                const productosCollection = collection(db, 'productos'); // Usar 'collection' para obtener la referencia
+                onSnapshot(productosCollection, manejarSnapshot); // Usar 'onSnapshot' con la referencia de la colección
+            }
         };
         obtenerPlatillos();
-    }, []);
+    }, [db]);
 
     // Snapshot para manejar los datos en tiempo real
     function manejarSnapshot(snapshot) {
-        const platillos = snapshot.docs.map(doc => {
-            return {
-                id: doc.id,
-                ...doc.data()
-            };
-        });
+        const platillos = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
         // Guardar los resultados en el state
         guardarPlatillos(platillos);

@@ -1,8 +1,9 @@
-import app from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
-import 'firebase/compat/storage';
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
+// Configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDZau1l-3qExz_VI9_kb1TdtME1vAEXHC4",
   authDomain: "restaurante-90728.firebaseapp.com",
@@ -13,15 +14,13 @@ const firebaseConfig = {
   measurementId: "G-S1F3WDCB2R"
 };
 
-class Firebase {
-  constructor() {
-    if (!app.apps.length) {
-      app.initializeApp(firebaseConfig);
-    }
-    this.db = app.firestore();
-    this.storage = app.storage();
-  }
-}
+// Inicializa Firebase
+const firebaseApp = initializeApp(firebaseConfig);
 
-const firebase = new Firebase();
-export default firebase;
+// Inicializa los servicios de Firebase
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
+
+// Exporta los servicios individualmente
+export { auth, db, storage };

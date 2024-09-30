@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { FirebaseContext } from '../../firebase';
+import { collection, onSnapshot, query, where } from 'firebase/firestore'; // Importar las funciones correctas
 import Ingreso from '../ui/Ingreso';
 import { ChartLineIcon } from "lucide-react";
 import { InputText } from 'primereact/inputtext'; // Para el campo de búsqueda
@@ -7,7 +8,7 @@ import { Paginator } from 'primereact/paginator'; // Paginación
 
 const Ingresos = () => {
     // context con las operaciones de firebase
-    const { firebase } = useContext(FirebaseContext);
+    const { db } = useContext(FirebaseContext);
 
     // state con los ingresos y la paginación
     const [ingresos, guardarIngresos] = useState([]);
@@ -18,12 +19,17 @@ const Ingresos = () => {
 
     useEffect(() => {
         const obtenerIngresos = () => {
-            firebase.db.collection('ordenes')
-                .where('completado', "==", true)
-                .onSnapshot(manejarSnapshot);
+            if (db) {
+                const ingresosQuery = query(
+                    collection(db, 'ordenes'),
+                    where('completado', '==', true)
+                );
+
+                onSnapshot(ingresosQuery, manejarSnapshot);
+            }
         }
         obtenerIngresos();
-    }, []);
+    }, [db]);
 
     function manejarSnapshot(snapshot) {
         const ingresos = snapshot.docs.map(doc => ({
