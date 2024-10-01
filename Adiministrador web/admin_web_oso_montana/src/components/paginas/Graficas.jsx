@@ -11,12 +11,13 @@ import img_borde2 from '../../assets/borde2.png';
 
 const Graficas = () => {
     const { db } = useContext(FirebaseContext);
-    const [datos, setDatos] = useState([]);
+    const [datos, setDatos] = useState([]); // Datos detallados para el PDF
+    const [datosAgrupados, setDatosAgrupados] = useState([]); // Datos agrupados para las gráficas
     const [mes, setMes] = useState(new Date().getMonth() + 1);
     const [ano, setAno] = useState(new Date().getFullYear());
     const [mensaje, setMensaje] = useState('');
     const [vista, setVista] = useState('mensual');
-
+    
     useEffect(() => {
         if (!db) return;
 
@@ -28,6 +29,7 @@ const Graficas = () => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const ordenes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+            // Filtramos por mes y año
             const filtrado = ordenes.filter(orden => {
                 const fechaIngreso = orden.fecha_ingreso ? orden.fecha_ingreso.toDate() : null;
                 if (fechaIngreso) {
@@ -36,9 +38,26 @@ const Graficas = () => {
                 return false;
             });
 
-            setDatos(filtrado);
+            // Agrupamos los datos para las gráficas
+            const agrupadoPorFecha = filtrado.reduce((acc, orden) => {
+                const fecha = orden.fecha_ingreso ? orden.fecha_ingreso.toDate().toLocaleDateString('es-ES') : '';
+                if (!acc[fecha]) {
+                    acc[fecha] = 0;
+                }
+                acc[fecha] += orden.total;
+                return acc;
+            }, {});
 
-            if (filtrado.length === 0) {
+            // Convertimos los datos agrupados a un formato adecuado para las gráficas
+            const datosGrafica = Object.keys(agrupadoPorFecha).map(fecha => ({
+                fecha,
+                total: agrupadoPorFecha[fecha]
+            }));
+
+            setDatosAgrupados(datosGrafica); // Actualizamos los datos para la gráfica
+            setDatos(filtrado); // Actualizamos los datos detallados para el PDF
+
+            if (datosGrafica.length === 0) {
                 setMensaje(`No se han encontrado ingresos para ${mes}/${ano}`);
             } else {
                 setMensaje('');
@@ -61,6 +80,13 @@ const Graficas = () => {
         addDecorativeBorders();
 
         doc.addImage(logo, 'PNG', 15, 40, 30, 30);
+
+        // Validar que existan datos antes de generar el PDF
+        if (datos.length === 0) {
+            doc.text('No se encontraron datos para generar el reporte.', 14, 80);
+            doc.save(`Reporte_Ingresos_${mes}_${ano}.pdf`);
+            return;
+        }
 
         const totalIngresos = datos.reduce((sum, dato) => {
             if (!dato.orden || !Array.isArray(dato.orden)) {
@@ -105,9 +131,14 @@ const Graficas = () => {
             const mesa = dato.mesa || 'N/A';
             const metodoPago = dato.tipoPago || 'Desconocido';
 
-            // Mostrar productos de la orden con sus respectivos precios
-            const orden = dato.orden.map(item => `${item.nombre} = $${item.precio.toLocaleString('es-CO')}`).join(', ');
-            const subtotal = dato.orden.reduce((s, item) => s + (item.precio * item.cantidad), 0);
+            // Validar que dato.orden esté definido y sea un arreglo
+            const orden = dato.orden && Array.isArray(dato.orden)
+                ? dato.orden.map(item => `${item.nombre} = $${item.precio.toLocaleString('es-CO')}`).join(', ')
+                : 'N/A';
+
+            const subtotal = dato.orden && Array.isArray(dato.orden)
+                ? dato.orden.reduce((s, item) => s + (item.precio * item.cantidad), 0)
+                : 0;
             const impuesto = subtotal * 0.08;
             const total = subtotal + impuesto;
 
@@ -150,9 +181,11 @@ const Graficas = () => {
         const conteoProductos = {};
 
         datos.forEach(dato => {
-            dato.orden.forEach(item => {
-                conteoProductos[item.nombre] = (conteoProductos[item.nombre] || 0) + item.cantidad;
-            });
+            if (dato.orden && Array.isArray(dato.orden)) {
+                dato.orden.forEach(item => {
+                    conteoProductos[item.nombre] = (conteoProductos[item.nombre] || 0) + item.cantidad;
+                });
+            }
         });
 
         const productosOrdenados = Object.entries(conteoProductos).sort((a, b) => b[1] - a[1]);
@@ -225,7 +258,7 @@ const Graficas = () => {
                     {mensaje ? (
                         <p>{mensaje}</p>
                     ) : (
-                        <Grafica datos={datos} />
+                        <Grafica datos={datosAgrupados} /> // Usamos datosAgrupados para la gráfica
                     )}
                 </>
             ) : (
