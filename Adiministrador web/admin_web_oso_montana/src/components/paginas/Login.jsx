@@ -57,12 +57,12 @@ export default function Component() {
         className="bg-gray-100 rounded-3xl shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff] p-12 max-w-md w-full space-y-8"
       >
         <div className="text-center">
-        <motion.div
+          <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
             className="bg-[#902a35] p-6 rounded-full inline-block shadow-[inset_5px_5px_10px_#902a35,inset_-5px_-5px_10px_#902a35]"
-            >
+          >
             <img src={oso_montana_logo} alt="Coffee" className="h-20 w-20 rounded-full" />
           </motion.div>
           <h2 className="mt-6 text-4xl font-extrabold text-gray-900">Oso de  la montaña </h2>
@@ -141,32 +141,32 @@ export default function Component() {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-[#853030] hover:text-[#ff9966] transition duration-300 ease-in-out">
+              <a href="#"
+                onClick={() => navigate('/recuperar-contraseña')} className="font-medium text-[#853030] hover:text-[#ff9966] transition duration-300 ease-in-out">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
           </div>
 
           <div>
-  <motion.button
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-    type="submit"
-    disabled={isLoading}
-    className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-      isLoading ? 'bg-gray-400' : 'bg-[#902a35]'
-    } hover:bg-[#902a35] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#902a35] transition duration-300 ease-in-out transform hover:scale-105 shadow-[5px_5px_10px_#bebebe,-5px_-5px_10px_#ffffff]`}
-  >
-    {isLoading ? (
-      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-    ) : (
-      'Iniciar Sesión'
-    )}
-  </motion.button>
-</div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="submit"
+              disabled={isLoading}
+              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white ${isLoading ? 'bg-gray-400' : 'bg-[#902a35]'
+                } hover:bg-[#902a35] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#902a35] transition duration-300 ease-in-out transform hover:scale-105 shadow-[5px_5px_10px_#bebebe,-5px_-5px_10px_#ffffff]`}
+            >
+              {isLoading ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                'Iniciar Sesión'
+              )}
+            </motion.button>
+          </div>
 
         </form>
         <AnimatePresence>
