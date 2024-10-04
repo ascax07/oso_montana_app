@@ -18,6 +18,21 @@ export default function Component() {
   const { auth, db } = useContext(FirebaseContext)
   const navigate = useNavigate()
 
+  // Función para validar los caracteres permitidos
+const validateInput = (input) => {
+  const regex = /^[a-zA-Z0-9@.]*$/; // Solo permite letras, números, @ y puntos
+  return regex.test(input);
+}
+
+
+
+const validatePassword = (password) => {
+  // Expresión regular para permitir letras, números y algunos caracteres especiales
+  const regex = /^[A-Za-z0-9@#$%^&+=!*]*$/;
+  return regex.test(password); // Devuelve true si es válida, false si no lo es
+};
+
+
   const handleLogin = async (e) => {
     e.preventDefault()
     setIsLoading(true)
@@ -87,8 +102,15 @@ export default function Component() {
                   className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#853030] focus:border-transparent focus:z-10 sm:text-sm transition duration-300 ease-in-out shadow-[inset_2px_2px_5px_#bebebe,inset_-3px_-3px_7px_#ffffff]"
                   placeholder="Correo electrónico"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (validateInput(value)) {
+                      setEmail(value); // Actualiza el estado solo si es válido
+                      setError(null); // Limpia el mensaje de error
+                    } else {
+                      setError("El correo contiene caracteres no permitidos."); // Mensaje de error si el input no es válido
+                    }
+                  }}/>
               </div>
             </div>
             <div>
@@ -108,7 +130,15 @@ export default function Component() {
                   className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#853030] focus:border-transparent focus:z-10 sm:text-sm transition duration-300 ease-in-out shadow-[inset_2px_2px_5px_#bebebe,inset_-3px_-3px_7px_#ffffff]"
                   placeholder="Contraseña"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (validatePassword(value)) {
+                      setPassword(value); // Actualiza el estado si la contraseña es válida
+                      setError(null); // Limpia el mensaje de error
+                    } else {
+                      setError("La contraseña contiene caracteres no permitidos."); // Mensaje de error
+                    }
+                  }}
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <button

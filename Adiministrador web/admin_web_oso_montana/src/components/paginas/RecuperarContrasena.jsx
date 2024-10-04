@@ -17,6 +17,24 @@ export default function RecuperarContrasena() {
   const navigate = useNavigate();
   const toast = useRef(null);
 
+
+    // Función para validar los caracteres permitidos
+const validateInput = (input) => {
+  const regex = /^[a-zA-Z0-9@.]*$/; // Solo permite letras, números, @ y puntos
+  return regex.test(input);
+}
+
+// Función modificada para manejar el cambio en el campo de correo
+const handleEmailChange = (e) => {
+  const value = e.target.value;
+  if (validateInput(value)) {
+    setEmail(value);
+    setError(null);
+  } else {
+    setError("El correo contiene caracteres no permitidos.");
+  }
+};
+
   const showConfirmDialog = () => {
     confirmDialog({
       message: '¿Estás seguro de que quieres restablecer tu contraseña?',
@@ -98,8 +116,15 @@ export default function RecuperarContrasena() {
                   className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#853030] focus:border-transparent focus:z-10 sm:text-sm transition duration-300 ease-in-out shadow-[inset_2px_2px_5px_#bebebe,inset_-3px_-3px_7px_#ffffff]"
                   placeholder="Correo electrónico"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (validateInput(value)) {
+                      setEmail(value); // Actualiza el estado solo si es válido
+                      setError(null); // Limpia el mensaje de error
+                    } else {
+                      setError("El correo contiene caracteres no permitidos."); // Mensaje de error si el input no es válido
+                    }
+                  }}                />
               </div>
             </div>
           </div>
