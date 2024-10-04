@@ -25,17 +25,17 @@ const IniciarSesion = ({ navigation }) => {
       Alert.alert('Error', 'Por favor ingrese el correo y la contraseña');
       return;
     }
-
+  
     setIsLoading(true);
-
+  
     try {
       const userCredential = await signInWithEmailAndPassword(firebase.auth, email, contraseña);
       const { user } = userCredential;
-
+  
       const usuariosRef = collection(firebase.db, 'usuarios');
       const q = query(usuariosRef, where('uid', '==', user.uid));
       const querySnapshot = await getDocs(q);
-
+  
       if (!querySnapshot.empty) {
         const userData = querySnapshot.docs[0].data();
         if (userData.activo) {
@@ -48,18 +48,27 @@ const IniciarSesion = ({ navigation }) => {
         Alert.alert('Error', 'Usuario no registrado, por favor cree una cuenta.');
       }
     } catch (error) {
-      console.log("Error de autenticación:", error);
+      // Aquí puedes omitir el log si no deseas que se muestre en la consola.
+      // console.log("Error de autenticación:", error); 
+  
       if (error.code === 'auth/user-not-found') {
-        Alert.alert('Error', 'Usuario no registrado, por favor cree una cuenta.');
+        Alert.alert('Atención!', 'Usuario no registrado, por favor cree una cuenta.');
       } else if (error.code === 'auth/wrong-password') {
-        Alert.alert('Error', 'Contraseña incorrecta.');
+        Alert.alert('Atención!', 'Contraseña incorrecta, por favor digite bien su contraseña.');
+      } else if (error.code === 'auth/invalid-credential') {
+        Alert.alert('Atención!', 'Credenciales no válidas. Asegúrese de haber ingresado un correo y contraseña correctos o crea una cuenta.');
+      } else if (error.code === 'auth/too-many-requests') {
+        Alert.alert('Atención!', 'El acceso a esta cuenta ha sido temporalmente deshabilitado debido a muchos intentos de inicio de sesión fallidos. Puede restaurarlo inmediatamente restableciendo su contraseña o intentar nuevamente más tarde.');
       } else {
         Alert.alert('Error', error.message);
       }
-    } finally {
+    } 
+    finally {
       setIsLoading(false);
     }
   };
+  
+  
 
   return (
     <NativeBaseProvider>
@@ -127,6 +136,14 @@ const IniciarSesion = ({ navigation }) => {
                 Iniciar Sesión
               </Text>
             </Button>
+            <HStack mt={4}>
+              <Text fontSize="sm" color={textColor}>¿Olvidaste tu contraseña? </Text>
+              <Pressable onPress={() => navigation.navigate('Recuperar_contrasena')}>
+                <Text fontSize="sm" color={primaryColor} fontWeight="bold">
+                  Cambia tu contraseña
+                </Text>
+              </Pressable>
+            </HStack>
             <HStack mt={4}>
               <Text fontSize="sm" color={textColor}>¿No tienes una cuenta? </Text>
               <Pressable onPress={() => navigation.navigate('Registro')}>

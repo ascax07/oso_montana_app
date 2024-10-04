@@ -24,17 +24,23 @@ const Registro = ({ navigation }) => {
   const primaryColor = '#853030';
 
   const handleRegistro = async () => {
+    // Verificar si todos los campos están llenos
+    if (!email || !nombre || !contraseña || !confirmarContraseña) {
+      Alert.alert('Atencion!', 'Debes rellenar todos los campos');
+      return;
+    }
+  
     if (contraseña !== confirmarContraseña) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
     }
-
+  
     setIsLoading(true);
-
+  
     try {
       const userCredential = await createUserWithEmailAndPassword(firebase.auth, email, contraseña);
       const { user } = userCredential;
-
+  
       await addDoc(collection(firebase.db, 'usuarios'), {
         uid: user.uid,
         email: user.email,
@@ -42,7 +48,7 @@ const Registro = ({ navigation }) => {
         rol: 'mesero',
         activo: false
       });
-
+  
       Alert.alert('Éxito', 'Usuario registrado correctamente');
       navigation.navigate('IniciarSesion');
     } catch (error) {
@@ -51,6 +57,7 @@ const Registro = ({ navigation }) => {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <NativeBaseProvider>
