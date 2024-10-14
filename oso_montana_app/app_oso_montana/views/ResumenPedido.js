@@ -11,33 +11,32 @@ import {
     Button,
     ScrollView,
     Center,
-    Pressable,
     Select,
     TextArea,
     IconButton,
     Divider,
-    useTheme,
     StatusBar,
     Fab,
+    Spinner,
     extendTheme,
+    useTheme,
 } from 'native-base';
 import { useNavigation } from '@react-navigation/native';
-import { collection, getDocs, getDoc, doc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import firebase from '../firebase';
 import PedidoContext from '../context/pedidos/pedidosContext';
 import { Ionicons } from '@expo/vector-icons';
 
-// Extender el tema de NativeBase para incluir nuestro color personalizado
 const theme = extendTheme({
     colors: {
         primary: {
             600: '#853030',
-            700: '#6d2727', // Un tono más oscuro para estados presionados
+            700: '#6d2727',
         },
     },
 });
 
-const ResumenPedido = () => {
+export default function ResumenPedido() {
     const navigation = useNavigation();
     const { colors } = useTheme();
     const { pedido, total, mostrarResumen, eliminarProducto, pedidoRealizado } = useContext(PedidoContext);
@@ -45,28 +44,29 @@ const ResumenPedido = () => {
     const [nombreMesa, setNombreMesa] = useState('');
     const [mesasDisponibles, setMesasDisponibles] = useState([]);
     const [solicitudCliente, setSolicitudCliente] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    useEffect(() => {
+        const colRef = collection(firebase.db, 'mesas');
+        const unsubscribe = onSnapshot(colRef, (querySnapshot) => {
+            const mesas = querySnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(mesa => mesa.disponible);
+            setMesasDisponibles(mesas);
+        }, (error) => {
+            console.error("Error al obtener mesas:", error);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         calcularTotal();
-        obtenerMesas();
     }, [pedido]);
 
     const calcularTotal = () => {
         let nuevoTotal = pedido.reduce((total, articulo) => total + articulo.total, 0);
         mostrarResumen(nuevoTotal);
-    };
-
-    const obtenerMesas = async () => {
-        try {
-            const colRef = collection(firebase.db, 'mesas');
-            const mesasSnapshot = await getDocs(colRef);
-            const mesas = mesasSnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(mesa => mesa.disponible);
-            setMesasDisponibles(mesas);
-        } catch (error) {
-            console.error("Error al obtener mesas:", error);
-        }
     };
 
     const handleSelectMesa = async (id) => {
@@ -82,6 +82,44 @@ const ResumenPedido = () => {
         }
     };
 
+    // Corrección aplicada aquí
+    const verificarYActualizarStock = async () => {
+        let stockSuficiente = true;
+        let productosActualizados = {};
+
+        for (let platillo of pedido) {
+            const platilloRef = doc(firebase.db, 'productos', platillo.id);
+            const platilloDoc = await getDoc(platilloRef);
+
+            if (platilloDoc.exists()) {
+                const stockActual = platilloDoc.data().stock;
+
+                // Solo restamos stock si el campo está definido
+                if (stockActual !== undefined) {
+                    if (stockActual < platillo.cantidad) {
+                        Alert.alert(
+                            'Stock insuficiente',
+                            `No hay suficiente stock para ${platillo.nombre}. Stock actual: ${stockActual}`
+                        );
+                        stockSuficiente = false;
+                        break;
+                    } else {
+                        productosActualizados[platillo.id] = stockActual - platillo.cantidad;
+                    }
+                }
+            }
+        }
+
+        if (stockSuficiente) {
+            for (let [id, nuevoStock] of Object.entries(productosActualizados)) {
+                const platilloRef = doc(firebase.db, 'productos', id);
+                await updateDoc(platilloRef, { stock: nuevoStock });
+            }
+        }
+
+        return stockSuficiente;
+    };
+
     const Pedidos = () => {
         if (!nombreMesa) {
             Alert.alert('Mesa no seleccionada', 'Por favor selecciona una mesa antes de proceder con el pedido.');
@@ -95,6 +133,13 @@ const ResumenPedido = () => {
                 {
                     text: 'Confirmar',
                     onPress: async () => {
+                        setIsProcessing(true);
+                        const stockValido = await verificarYActualizarStock();
+                        if (!stockValido) {
+                            setIsProcessing(false);
+                            return;
+                        }
+
                         const pedidoObj = {
                             tiempoentrega: 0,
                             completado: false,
@@ -102,9 +147,9 @@ const ResumenPedido = () => {
                             orden: pedido,
                             mesa: nombreMesa,
                             solicitudCliente,
-                            creado: serverTimestamp(), // Timestamp de Firebase
-                            fecha_ingreso: serverTimestamp(), // Campo 'fecha_ingreso' como timestamp del servidor
-                            lista: false // Nuevo campo 'lista' de tipo booleano
+                            creado: serverTimestamp(),
+                            fecha_ingreso: serverTimestamp(),
+                            lista: false
                         };
 
                         try {
@@ -116,13 +161,19 @@ const ResumenPedido = () => {
                                 await updateDoc(mesaRef, { disponible: false });
                             }
 
+                            setIsProcessing(false);
                             navigation.navigate("Pedidos");
                         } catch (error) {
                             console.log(error);
+                            setIsProcessing(false);
                         }
                     }
                 },
-                { text: 'Revisar', style: 'cancel' }
+                { 
+                    text: 'Revisar', 
+                    style: 'cancel',
+                    onPress: () => setIsProcessing(false)
+                }
             ]
         );
     };
@@ -138,6 +189,19 @@ const ResumenPedido = () => {
         );
     };
 
+    if (isProcessing) {
+        return (
+            <NativeBaseProvider theme={theme}>
+                <Center flex={1} bg="coolGray.50">
+                    <VStack space={4} alignItems="center">
+                        <Spinner size="lg" color="#853030" />
+                        <Text fontSize="xl" color="#853030">Procesando pedido...</Text>
+                    </VStack>
+                </Center>
+            </NativeBaseProvider>
+        );
+    }
+
     return (
         <NativeBaseProvider theme={theme}>
             <StatusBar backgroundColor="#853030" barStyle="light-content" />
@@ -146,7 +210,7 @@ const ResumenPedido = () => {
                     <VStack space={4} p={4}>
                         <Heading size="xl" color="#853030">Resumen del Pedido</Heading>
                         {pedido.map((platillo, i) => {
-                            const { cantidad, nombre, imagen, id, precio } = platillo;
+                            const { cantidad, nombre, imagen, id, precio, stock } = platillo;
                             return (
                                 <Box key={id + i} bg="white" rounded="lg" shadow={2} p={4}>
                                     <HStack space={4} alignItems="center">
@@ -155,6 +219,11 @@ const ResumenPedido = () => {
                                             <Text bold fontSize="lg">{nombre}</Text>
                                             <Text>Cantidad: {cantidad}</Text>
                                             <Text bold color="#853030">$ {precio.toLocaleString('es-CO')}</Text>
+                                            {stock !== undefined && (
+                                                <Text color={stock > 0 ? "green.600" : "red.600"}>
+                                                    Stock: {stock}
+                                                </Text>
+                                            )}
                                         </VStack>
                                         <IconButton
                                             icon={<Ionicons name="trash-outline" size={24} color="#853030" />}
@@ -169,22 +238,32 @@ const ResumenPedido = () => {
                             <Text fontSize="xl" bold>Total a Pagar:</Text>
                             <Text fontSize="2xl" bold color="#853030">$ {total.toLocaleString('es-CO')}</Text>
                         </HStack>
-                        <Select
-                            selectedValue={selectedMesa}
-                            minWidth="200"
-                            placeholder="Selecciona una mesa"
-                            onValueChange={handleSelectMesa}
-                            bg="white"
-                            rounded="lg"
-                            _selectedItem={{
-                                bg: "rgba(133, 48, 48, 0.1)",
-                                endIcon: <Ionicons name="checkmark" size={20} color="#853030" />
-                            }}
-                        >
-                            {mesasDisponibles.map((mesa) => (
-                                <Select.Item label={`Mesa ${mesa.numero}`} value={mesa.id} key={mesa.id} />
-                            ))}
-                        </Select>
+
+                        {mesasDisponibles.length === 0 ? (
+                            <Center>
+                                <Text color="red.500" fontSize="lg" bold>
+                                    No hay mesas disponibles en este momento.
+                                </Text>
+                            </Center>
+                        ) : (
+                            <Select
+                                selectedValue={selectedMesa}
+                                minWidth="200"
+                                placeholder="Selecciona una mesa"
+                                onValueChange={handleSelectMesa}
+                                bg="white"
+                                rounded="lg"
+                                _selectedItem={{
+                                    bg: "rgba(133, 48, 48, 0.1)",
+                                    endIcon: <Ionicons name="checkmark" size={20} color="#853030" />
+                                }}
+                            >
+                                {mesasDisponibles.map((mesa) => (
+                                    <Select.Item label={`Mesa ${mesa.numero}`} value={mesa.id} key={mesa.id} />
+                                ))}
+                            </Select>
+                        )}
+
                         <TextArea
                             placeholder="Escribe aquí tu solicitud especial..."
                             value={solicitudCliente}
@@ -213,10 +292,9 @@ const ResumenPedido = () => {
                     onPress={Pedidos}
                     bg="#853030"
                     _pressed={{ bg: "#6d2727" }}
+                    isDisabled={isProcessing}
                 />
             </Box>
         </NativeBaseProvider>
     );
 }
-
-export default ResumenPedido;

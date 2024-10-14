@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext  } from 'react';
-import { RefreshControl, BackHandler } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { RefreshControl, BackHandler, Alert } from 'react-native';
 import {
   Box,
   FlatList,
@@ -11,15 +11,15 @@ import {
   useTheme,
   StatusBar,
   Heading,
-  Spinner,
   Badge,
   useToast,
   IconButton,
   Divider,
   Center,
+  Modal, // Importar Modal
+  Button, // Importar Button
 } from 'native-base';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-
 import { collection, onSnapshot, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import firebase from '../firebase';
 import PedidoContext from '../context/pedidos/pedidosContext';
@@ -28,20 +28,12 @@ import { Ionicons } from '@expo/vector-icons';
 const Pedidos = () => {
   const [pedidos, setPedidos] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showModal, setShowModal] = useState(false); // Estado para el modal
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null); // Estado para el pedido seleccionado
   const navigation = useNavigation();
   const { pedidoRealizado } = useContext(PedidoContext);
   const { colors } = useTheme();
   const toast = useToast();
-
-  const NuevaOrden = () => {
-    navigation.navigate('NuevaOrden'); 
-};
-
-const PerfilUsuario = () => {
-  navigation.navigate('PerfilUsuario'); 
-};
-
-
 
   const primaryColor = '#853030';
 
@@ -154,6 +146,14 @@ const PerfilUsuario = () => {
               <Text fontSize="xs" color="gray.500">
                 {creado && creado.toDate().toLocaleString()}
               </Text>
+              <Pressable 
+                onPress={() => {
+                  setPedidoSeleccionado(item); // Establecer el pedido seleccionado
+                  setShowModal(true); // Mostrar el modal
+                }}
+              >
+                <Text color={primaryColor} fontWeight="bold">Detalles</Text>
+              </Pressable>
             </VStack>
           </HStack>
           <Divider />
@@ -196,14 +196,13 @@ const PerfilUsuario = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-        const onBackPress = () => {
-            return true;
-        };
-        BackHandler.addEventListener('hardwareBackPress', onBackPress);
-        return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+      const onBackPress = () => {
+          return true;
+      };
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
     }, [])
-);
-  
+  );
 
   return (
     <Box flex={1} bg="coolGray.100" safeArea>
@@ -231,6 +230,70 @@ const PerfilUsuario = () => {
           }
         />
       </VStack>
+
+      {/* Modal para mostrar detalles del pedido */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} _backdrop={{
+        _dark: { bg: "coolGray.800" },
+        bg: "warmGray.50"
+      }}>
+        <Modal.Content maxWidth="350">
+          <Modal.CloseButton />
+          <Modal.Header>Detalles del Pedido</Modal.Header>
+          <Modal.Body>
+            {pedidoSeleccionado ? (
+              <>
+                <Text fontWeight="bold">Mesa: {pedidoSeleccionado.mesa}</Text>
+                <Text color="gray.500">Estado: {pedidoSeleccionado.recogido ? "Recogido" : (pedidoSeleccionado.lista ? "Listo" : "Preparando")}</Text>
+                <Text>Creado: {pedidoSeleccionado.creado && pedidoSeleccionado.creado.toDate().toLocaleString()}</Text>
+
+                {/* Mostrar la solicitud del cliente */}
+                {pedidoSeleccionado.solicitudCliente ? (
+                  <Text mt={2} fontWeight="bold">Solicitud del Cliente: {pedidoSeleccionado.solicitudCliente}</Text>
+                ) : null}
+
+                {/* Mostrar los platillos seleccionados */}
+                <Text mt={4} fontWeight="bold">Platillos:</Text>
+                {pedidoSeleccionado.orden && pedidoSeleccionado.orden.length > 0 ? (
+                  pedidoSeleccionado.orden.map((platillo, index) => (
+                    <Box key={index} mt={2} p={2} bg="gray.100" rounded="md">
+                      <Text fontWeight="bold">{platillo.nombre}</Text>
+                      <Text>Cantidad: {platillo.cantidad}</Text>
+                      <Text>Precio: ${platillo.precio.toLocaleString()}</Text>
+                      <Text>Total: ${platillo.total.toLocaleString()}</Text>
+                      <Text>Descripción: {platillo.descripcion}</Text>
+                    </Box>
+                  ))
+                ) : (
+                  <Text>No hay platillos en esta orden.</Text>
+                )}
+              </>
+            ) : (
+              <Text>No se encontraron detalles para este pedido.</Text>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button.Group space={2}>
+              <Button variant="ghost" colorScheme="blueGray" onPress={() => setShowModal(false)}>
+                Cancelar
+              </Button>
+
+              {/* Si el pedido está en estado Preparando, mostrar el botón Editar */}
+              {pedidoSeleccionado && !pedidoSeleccionado.lista && !pedidoSeleccionado.recogido ? (
+                <Button onPress={() => {
+                  setShowModal(false);
+                  navigation.navigate('EditarPedido', { pedidoId: pedidoSeleccionado.id });
+                }}>
+                  Editar
+                </Button>
+              ) : (
+                <Button onPress={() => setShowModal(false)}>
+                  Aceptar
+                </Button>
+              )}
+            </Button.Group>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal>
 
       {/* Aquí agregamos el navbar */}
       <HStack style={styles.navbar} bg={primaryColor} alignItems="center" justifyContent="space-around" safeAreaBottom>

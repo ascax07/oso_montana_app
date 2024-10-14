@@ -4,21 +4,27 @@ import { NativeBaseProvider } from 'native-base';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-// Import Views
+import Registro from './views/Registro';
+import IniciarSesion from './views/IniciarSesion';
+import RecuperarContrasena from './views/RecuperarContrasena';
+
+import PerfilUsuario from './views/PerfilUsuario';
+
 import NuevaOrden from './views/NuevaOrden';
 import Menu from './views/Menu';
 import DetallePlatillo from './views/DetallePlatillo';
 import FormularioPlatillo from './views/FormularioPlatillo';
 import ResumenPedido from './views/ResumenPedido';
-import ProgresoPedido from './views/ProgresoPedido';
 import Pedidos from './views/Pedidos';
-import PerfilUsuario from './views/PerfilUsuario';
-import RecuperarContrasena from './views/RecuperarContrasena'; 
-import IniciarSesion from './views/IniciarSesion'; 
+import ProgresoPedido from './views/ProgresoPedido';
+import EditarPedido from './views/EditarPedido';
 
-import Registro from './views/Registro';           // Added Registro
 
-// Import Contexts
+
+//Components
+import BotonResumen from './components/ui/BotonResumen';
+
+// Importar state de context
 import FirebaseState from './context/firebase/firebaseState';
 import PedidoState from './context/pedidos/pedidoState';
 
@@ -31,23 +37,21 @@ const App = () => {
         <NativeBaseProvider>
           <NavigationContainer>
             <Stack.Navigator
+              initialRouteName="IniciarSesion" // Aquí configuramos la vista inicial
               screenOptions={{
                 headerStyle: {
                   backgroundColor: '#853030',
                 },
                 headerTitleStyle: {
                   fontWeight: 'bold',
+                  color: '#ffffff',
                 },
               }}
             >
-              {/* Add the screens here */}
               <Stack.Screen
-                name="IniciarSesion" // Add IniciarSesion screen
+                name="IniciarSesion"
                 component={IniciarSesion}
-                options={{
-                  title: 'Iniciar Sesión',
-                  headerTitleAlign: 'center',
-                }}
+                options={{ title: 'Iniciar Sesión', headerTitleAlign: 'center' }}
               />
 
               <Stack.Screen
@@ -59,76 +63,23 @@ const App = () => {
                 }}
               />
 
-              
+
+
               <Stack.Screen
-                name="Registro" // Add Registro screen
+                name="Registro"
                 component={Registro}
-                options={{
-                  title: 'Registro',
-                  headerTitleAlign: 'center',
-                }}
+                options={{ title: 'Crear Cuenta', headerTitleAlign: 'center' }}
               />
+
 
               <Stack.Screen
                 name="NuevaOrden"
                 component={NuevaOrden}
                 options={{
-                  title: 'Nueva Orden',
+                  title: "Nueva Orden",
                   headerTitleAlign: 'center',
-                }}
-              />
-
-              <Stack.Screen
-                name="Menu"
-                component={Menu}
-                options={{
-                  title: 'Nuestro Menú',
-                  headerTitleAlign: 'center',
-                }}
-              />
-
-              <Stack.Screen
-                name="DetallePlatillo"
-                component={DetallePlatillo}
-                options={{
-                  title: 'Detalle Platillo',
-                  headerTitleAlign: 'center',
-                }}
-              />
-
-              <Stack.Screen
-                name="FormularioPlatillo"
-                component={FormularioPlatillo}
-                options={{
-                  title: 'Ordenar Platillo',
-                  headerTitleAlign: 'center',
-                }}
-              />
-
-              <Stack.Screen
-                name="ResumenPedido"
-                component={ResumenPedido}
-                options={{
-                  title: 'Resumen Pedido',
-                  headerTitleAlign: 'center',
-                }}
-              />
-
-              <Stack.Screen
-                name="ProgresoPedido"
-                component={ProgresoPedido}
-                options={{
-                  title: 'Progreso de Pedido',
-                  headerTitleAlign: 'center',
-                }}
-              />
-
-              <Stack.Screen
-                name="Pedidos"
-                component={Pedidos}
-                options={{
-                  title: 'Lista de Pedidos',
-                  headerTitleAlign: 'center',
+                  headerLeft: null,  // Deshabilita el botón de retroceso
+                  gestureEnabled: false // También desactiva el gesto de deslizar para volver atrás
                 }}
               />
 
@@ -136,8 +87,76 @@ const App = () => {
                 name="PerfilUsuario"
                 component={PerfilUsuario}
                 options={{
-                  title: 'Perfil de Usuario',
+                  title: "Perfil Usuario",
                   headerTitleAlign: 'center',
+                  headerLeft: null,  // Deshabilita el botón de retroceso
+                  gestureEnabled: false // También desactiva el gesto de deslizar para volver atrás
+                }}
+              />
+
+              <Stack.Screen
+                name="Menu"
+                component={Menu}
+                options={{
+                  title: "Nuestro Menu",
+                  headerTitleAlign: 'center', // Esto centra el título
+                  headerRight: props => <BotonResumen />
+                }}
+              />
+
+              <Stack.Screen
+                name="DetallePlatillo"
+                component={DetallePlatillo}
+                options={{
+                  title: "Detalle Platillo",
+                  headerTitleAlign: 'center' // Esto centra el título
+                }}
+              />
+
+              <Stack.Screen
+                name="FormularioPlatillo"
+                component={FormularioPlatillo}
+                options={{
+                  title: "Ordenar Platillo",
+                  headerTitleAlign: 'center' // Esto centra el título
+                }}
+              />
+
+              <Stack.Screen
+                name="ResumenPedido"
+                component={ResumenPedido}
+                options={{
+                  title: "Resumen Pedido",
+                  headerTitleAlign: 'center' // Esto centra el título
+                }}
+              />
+
+              <Stack.Screen
+                name="Pedidos"
+                component={Pedidos}
+                options={{
+                  title: "Pedidos",
+                  headerTitleAlign: 'center',// Esto centra el título
+                  headerLeft: null,  // Deshabilita el botón de retroceso
+                  gestureEnabled: false // También desactiva el gesto de deslizar para volver atrás
+                }}
+              />
+
+              <Stack.Screen
+                name="ProgresoPedido"
+                component={ProgresoPedido}
+                options={{
+                  title: "Progreso de Pedido",
+                  headerTitleAlign: 'center' // Esto centra el título
+                }}
+              />
+
+              <Stack.Screen
+                name="EditarPedido"
+                component={EditarPedido}
+                options={{
+                  title: "Editar  Pedido",
+                  headerTitleAlign: 'center' // Esto centra el título
                 }}
               />
             </Stack.Navigator>

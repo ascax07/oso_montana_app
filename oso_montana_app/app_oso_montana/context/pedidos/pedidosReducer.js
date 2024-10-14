@@ -3,8 +3,8 @@ import {
     CONFIRMAR_ORDENAR_PLATILLO,
     MOSTRAR_RESUMEN,
     ELIMINAR_PRODUCTO,
-    PEDIDO_ORDENADO
-
+    PEDIDO_ORDENADO,
+    VERIFICAR_Y_ACTUALIZAR_STOCK
 } from '../../types'
 
 export default (state, action) => {
@@ -36,8 +36,17 @@ export default (state, action) => {
                 total: 0,
                 idpedido: action.payload
             }
+        case VERIFICAR_Y_ACTUALIZAR_STOCK:
+            return {
+                ...state,
+                pedido: state.pedido.map(platillo => ({
+                    ...platillo,
+                    stock: action.payload[platillo.id] !== undefined 
+                        ? action.payload[platillo.id] 
+                        : platillo.stock
+                }))
+            }
         default:
             return state;
     }
-    
 }

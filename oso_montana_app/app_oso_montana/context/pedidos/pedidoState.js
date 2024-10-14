@@ -1,9 +1,7 @@
-import React, { useReducer } from 'react';
-
-
+import React, { useReducer, useContext } from 'react';
 import PedidoReducer from './pedidosReducer';
 import PedidoContext from './pedidosContext';
-
+import FirebaseContext from '../firebase/firebaseContext';
 import {
     SELECCIONAR_PRODUCTO,
     CONFIRMAR_ORDENAR_PLATILLO,
@@ -13,77 +11,90 @@ import {
 } from '../../types';
 
 const PedidoState = props => {
-
-
-    // Crear state inicial
-    const initialState = {
+    const [state, dispatch] = useReducer(PedidoReducer, {
         pedido: [],
         platillo: null,
         total: 0,
         idpedido: '',
-    }
+    });
 
-    // useReducer con dispatch  para ejecutar las funciones
-    const [state, dispatch] = useReducer(PedidoReducer, initialState);
+    const { actualizarStock } = useContext(FirebaseContext);
 
-    //Selecciona el producto que el usuario desea seleccionar
-    const seleccionarPlatillo = platillo  => {
+    const seleccionarPlatillo = platillo => {
         dispatch({ 
             type: SELECCIONAR_PRODUCTO,
             payload: platillo
-        })
+        });
     }
 
-    //cuando el usuario confrima un platillo
     const guardarPedido = pedido => {
         dispatch({
             type: CONFIRMAR_ORDENAR_PLATILLO,
             payload: pedido
-        })
+        });
     }
 
-      // Muestra el total a pagar en el resumen
-      const mostrarResumen = total => {
+    const mostrarResumen = total => {
         dispatch({
             type: MOSTRAR_RESUMEN,
             payload: total
-        })
+        });
     }
 
-        // Elimina un articulo del carrito
-        const eliminarProducto = id => {
-            dispatch({
-                type: ELIMINAR_PRODUCTO,
-                payload: id
-            })
+    const eliminarProducto = id => {
+        dispatch({
+            type: ELIMINAR_PRODUCTO,
+            payload: id
+        });
+    }
+
+    const pedidoRealizado = id => {
+        dispatch({
+            type: PEDIDO_ORDENADO,
+            payload: id
+        });
+    }
+
+    const verificarYActualizarStock = async () => {
+        let stockSuficiente = true;
+        let productosActualizados = {};
+
+        for (let platillo of state.pedido) {
+            if (platillo.stock !== undefined) {
+                if (platillo.cantidad > platillo.stock) {
+                    stockSuficiente = false;
+                    break;
+                } else {
+                    productosActualizados[platillo.id] = platillo.stock - platillo.cantidad;
+                }
+            }
         }
-        
-        const pedidoRealizado = id => {
-            dispatch({
-                type: PEDIDO_ORDENADO,
-                payload: id
-            })
+
+        if (stockSuficiente) {
+            await actualizarStock(productosActualizados);
         }
+
+        return stockSuficiente;
+    }
 
     return (
         <PedidoContext.Provider
-        value={{
-            pedido: state.pedido,
-            platillo: state.platillo,
-            total: state.total,
-            idpedido:state.idpedido,
-            seleccionarPlatillo,
-            guardarPedido,
-            mostrarResumen,
-            eliminarProducto,
-            pedidoRealizado
-        }}
+            value={{
+                pedido: state.pedido,
+                platillo: state.platillo,
+                total: state.total,
+                idpedido: state.idpedido,
+                seleccionarPlatillo,
+                guardarPedido,
+                mostrarResumen,
+                eliminarProducto,
+                pedidoRealizado,
+                verificarYActualizarStock
+            }}
         >
             {props.children}
         </PedidoContext.Provider>
     )
-
-
 }
 
 export default PedidoState;

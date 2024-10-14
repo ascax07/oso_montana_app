@@ -1,54 +1,60 @@
 import React, { useReducer, useEffect } from 'react';
-
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import firebase from '../../firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import FirebaseReducer from './firebaseReducer';
 import FirebaseContext from './firebaseContext';
-
-import { OBTENER_PRODUCTOS_EXITO } from '../../types';
+import { OBTENER_PRODUCTOS_EXITO, ACTUALIZAR_STOCK } from '../../types';
 import _ from 'lodash';
 
-
-
-const FirebaseState = props => {
-
-    // Crear state inicial
+const FirebaseState = (props) => {
     const initialState = {
-        menu: []
-    }
+        menu: [],
+    };
 
-    // useReducer con dispatch para ejecutar las funciones
     const [state, dispatch] = useReducer(FirebaseReducer, initialState);
 
     const obtenerProductos = () => {
         const colRef = collection(firebase.db, 'productos');
-        const colQ = query(colRef, where('existencia', '==', true)); // Filtrar por existencia
+        const colQ = query(colRef, where('existencia', '==', true));
 
-        let platillos = [];
-        const unsuscribe = onSnapshot(colQ, querySnapshot => {                
-            querySnapshot.docs.forEach(doc => {
-                platillos.push({
-                    id: doc.id,
-                    ...doc.data() // Aquí obtenemos todos los datos del documento
-                });
-            });
+        const unsubscribe = onSnapshot(colQ, (querySnapshot) => {
+            const platillos = querySnapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
 
-            //Ordernar por categoria con lodash
-            platillos= _.sortBy(platillos, 'categoria');
+            const sortedPlatillos = _.sortBy(platillos, 'categoria');
 
-            // console.log(platillos)
-
-            //Tenemos los resultados de la base de datos
             dispatch({
                 type: OBTENER_PRODUCTOS_EXITO,
-                payload: platillos
+                payload: sortedPlatillos,
             });
+        }, (error) => {
+            console.error("Error al obtener productos: ", error);
         });
-    }
 
-    // Llamar a obtenerProductos cuando el componente se monte
+        return unsubscribe;
+    };
+
+    // Nueva función para actualizar el stock
+    const actualizarStock = async (productosActualizados) => {
+        try {
+            for (const [id, nuevoStock] of Object.entries(productosActualizados)) {
+                const platilloRef = doc(firebase.db, 'productos', id);
+                await updateDoc(platilloRef, { stock: nuevoStock });
+            }
+            dispatch({
+                type: ACTUALIZAR_STOCK,
+                payload: productosActualizados,
+            });
+        } catch (error) {
+            console.error("Error al actualizar el stock: ", error);
+        }
+    };
+
     useEffect(() => {
-        obtenerProductos();
+        const unsubscribe = obtenerProductos();
+        return () => unsubscribe();
     }, []);
 
     return (
@@ -56,12 +62,13 @@ const FirebaseState = props => {
             value={{
                 menu: state.menu,
                 firebase,
-                obtenerProductos
+                obtenerProductos,
+                actualizarStock,
             }}
         >
-            {props.children}
+            {props.children} 
         </FirebaseContext.Provider>
-    )
-}
+    );
+};
 
 export default FirebaseState;

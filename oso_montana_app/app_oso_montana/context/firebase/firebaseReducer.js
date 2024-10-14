@@ -1,4 +1,4 @@
-import { OBTENER_PRODUCTOS_EXITO } from '../../types';
+import { OBTENER_PRODUCTOS_EXITO, ACTUALIZAR_STOCK } from '../../types';
 
 export default (state, action) => {
     switch (action.type) {
@@ -7,8 +7,16 @@ export default (state, action) => {
                 ...state,
                 menu: action.payload
             }
-            
-            default:
-                return state;
+        case ACTUALIZAR_STOCK:
+            return {
+                ...state,
+                menu: state.menu.map(producto => 
+                    action.payload[producto.id] !== undefined
+                        ? { ...producto, stock: action.payload[producto.id] }
+                        : producto
+                )
+            }
+        default:
+            return state;
     }
 }

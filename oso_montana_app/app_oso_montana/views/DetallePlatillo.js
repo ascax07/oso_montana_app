@@ -1,19 +1,29 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Dimensions, StyleSheet, Alert } from 'react-native';
 import { NativeBaseProvider, Box, Text, VStack, HStack, Button, Icon, Input, Pressable, useColorModeValue, Image, Center } from 'native-base';
 import { useNavigation } from '@react-navigation/native';
 import PedidoContext from '../context/pedidos/pedidosContext';
+import FirebaseContext from '../context/firebase/firebaseContext';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, useSharedValue, useAnimatedStyle, withSpring, interpolate, useAnimatedScrollHandler } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, interpolate, useAnimatedScrollHandler } from 'react-native-reanimated';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const { width, height } = Dimensions.get('window');
 
 const DetalleFormularioPlatillo = () => {
     const { platillo, guardarPedido } = useContext(PedidoContext);
-    const { nombre, imagen, descripcion, precio } = platillo;
+    const { firebase } = useContext(FirebaseContext);
+    const [nombre, setNombre] = useState(platillo.nombre);
+    const [imagen, setImagen] = useState(platillo.imagen);
+    const [descripcion, setDescripcion] = useState(platillo.descripcion);
+    const [precio, setPrecio] = useState(platillo.precio);
+    const [id, setId] = useState(platillo.id);
     const navigation = useNavigation();
     const [cantidad, setCantidad] = useState(1);
     const [total, setTotal] = useState(precio);
+    const [disponible, setDisponible] = useState(platillo.stock);
+    const [showingAlert, setShowingAlert] = useState(false);
+    const [tieneStock, setTieneStock] = useState('stock' in platillo);
 
     const primaryColor = '#853030';
     const bgColor = useColorModeValue('warmGray.50', 'coolGray.900');
@@ -26,41 +36,47 @@ const DetalleFormularioPlatillo = () => {
     const scrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => {
             scrollY.value = event.contentOffset.y;
-        },
+        }
     });
 
     const imageStyle = useAnimatedStyle(() => {
-        const scale = interpolate(
-            scrollY.value,
-            [-100, 0],
-            [1.1, 1],
-            { extrapolateRight: 'clamp' }
-        );
+        const scale = interpolate(scrollY.value, [-100, 0], [1.1, 1], { extrapolateRight: 'clamp' });
         return {
             transform: [{ scale }],
-            height: interpolate(
-                scrollY.value,
-                [0, 200],
-                [imageHeight.value, height * 0.3],
-                { extrapolateRight: 'clamp' }
-            ),
+            height: interpolate(scrollY.value, [0, 200], [imageHeight.value, height * 0.3], { extrapolateRight: 'clamp' })
         };
     });
 
-    const headerStyle = useAnimatedStyle(() => {
-        return {
-            opacity: interpolate(
-                scrollY.value,
-                [0, 100],
-                [0, 1],
-                { extrapolateRight: 'clamp' }
-            ),
-        };
-    });
+    const headerStyle = useAnimatedStyle(() => ({
+        opacity: interpolate(scrollY.value, [0, 100], [0, 1], { extrapolateRight: 'clamp' })
+    }));
+
+    useEffect(() => {
+        const platilloRef = doc(firebase.db, 'productos', id);
+
+        const unsubscribe = onSnapshot(platilloRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const updatedData = docSnapshot.data();
+
+                setNombre(updatedData.nombre);
+                setImagen(updatedData.imagen);
+                setDescripcion(updatedData.descripcion);
+                setPrecio(updatedData.precio);
+                setTieneStock('stock' in updatedData);
+                if (tieneStock) {
+                    setDisponible(updatedData.stock);
+                }
+            }
+        }, (error) => {
+            console.error("Error al obtener actualizaciones en tiempo real: ", error);
+        });
+
+        return () => unsubscribe();
+    }, [id, firebase]);
 
     useEffect(() => {
         setTotal(precio * cantidad);
-    }, [cantidad]);
+    }, [cantidad, precio]);
 
     const decrementarUno = () => {
         if (cantidad > 1) {
@@ -69,10 +85,22 @@ const DetalleFormularioPlatillo = () => {
     };
 
     const incrementarUno = () => {
-        setCantidad(cantidad + 1);
+        if (!tieneStock || (disponible > 0 && cantidad < disponible)) {
+            setCantidad(cantidad + 1);
+        } else if (!showingAlert) {
+            setShowingAlert(true);
+            Alert.alert('Stock insuficiente', 'No hay más stock disponible de este producto.', [
+                { text: 'OK', onPress: () => setShowingAlert(false) }
+            ]);
+        }
     };
 
     const confirmarOrden = () => {
+        if (tieneStock && disponible === 0) {
+            Alert.alert('No hay stock', 'No hay stock de este producto en este momento.');
+            return;
+        }
+
         Alert.alert(
             '¿Deseas confirmar tu pedido?',
             'Un pedido confirmado ya no se podrá modificar',
@@ -81,18 +109,21 @@ const DetalleFormularioPlatillo = () => {
                     text: 'Confirmar',
                     onPress: () => {
                         const pedido = {
-                            ...platillo,
+                            id,
+                            nombre,
+                            imagen,
+                            descripcion,
+                            precio,
                             cantidad,
-                            total
+                            total,
+                            tieneStock,
+                            disponible: tieneStock ? disponible : null
                         };
                         guardarPedido(pedido);
                         navigation.navigate('ResumenPedido');
-                    },
+                    }
                 },
-                {
-                    text: 'Cancelar',
-                    style: 'cancel'
-                }
+                { text: 'Cancelar', style: 'cancel' }
             ]
         );
     };
@@ -113,12 +144,7 @@ const DetalleFormularioPlatillo = () => {
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
                     <Animated.View style={[styles.imageContainer, imageStyle]}>
-                        <Image
-                            source={{ uri: imagen }}
-                            alt={nombre}
-                            style={styles.image}
-                            resizeMode="cover"
-                        />
+                        <Image source={{ uri: imagen }} alt={nombre} style={styles.image} resizeMode="cover" />
                     </Animated.View>
 
                     <Animated.View entering={FadeInDown.duration(800).delay(300)}>
@@ -132,10 +158,27 @@ const DetalleFormularioPlatillo = () => {
                                         ${precio.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                     </Text>
                                 </HStack>
-                                
+
                                 <Text fontSize="md" color={useColorModeValue('coolGray.600', 'coolGray.400')}>
                                     {descripcion}
                                 </Text>
+
+                                {tieneStock ? (
+                                    disponible > 0 ? (
+                                        <HStack justifyContent="space-between" alignItems="center" mt={2}>
+                                            <Text fontSize="lg" fontWeight="bold" color={primaryColor}>
+                                                Stock disponible:
+                                            </Text>
+                                            <Text fontSize="lg" color={textColor}>
+                                                {disponible} unidades
+                                            </Text>
+                                        </HStack>
+                                    ) : (
+                                        <Text fontSize="lg" fontWeight="bold" color="red.500">
+                                            Producto agotado
+                                        </Text>
+                                    )
+                                ) : null}
 
                                 <Box bg={useColorModeValue('coolGray.100', 'coolGray.700')} p={4} borderRadius="xl">
                                     <HStack justifyContent="space-between" alignItems="center">
@@ -154,11 +197,21 @@ const DetalleFormularioPlatillo = () => {
                                                 fontSize="lg"
                                                 value={cantidad.toString()}
                                                 keyboardType="numeric"
-                                                onChangeText={text => setCantidad(parseInt(text) || 1)}
+                                                onChangeText={text => {
+                                                    const newCantidad = parseInt(text) || 1;
+                                                    if (!tieneStock || newCantidad <= disponible) {
+                                                        setCantidad(newCantidad);
+                                                    } else if (!showingAlert) {
+                                                        setShowingAlert(true);
+                                                        Alert.alert('Stock insuficiente', 'No hay más stock disponible de este producto.', [
+                                                            { text: 'OK', onPress: () => setShowingAlert(false) }
+                                                        ]);
+                                                    }
+                                                }}
                                                 borderColor={primaryColor}
                                                 _focus={{
                                                     borderColor: primaryColor,
-                                                    backgroundColor: `${primaryColor}10`,
+                                                    backgroundColor: `${primaryColor}10`
                                                 }}
                                             />
                                             <Pressable onPress={incrementarUno}>
@@ -211,16 +264,16 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.9)',
         zIndex: 1000,
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'center'
     },
     imageContainer: {
         width: width,
         height: height * 0.4,
-        overflow: 'hidden',
+        overflow: 'hidden'
     },
     image: {
         width: '100%',
-        height: '100%',
+        height: '100%'
     },
     bottomContainer: {
         position: 'absolute',
@@ -230,8 +283,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingBottom: 30,
         paddingTop: 10,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    },
+        backgroundColor: 'rgba(255, 255, 255, 0.9)'
+    }
 });
 
 export default DetalleFormularioPlatillo;
