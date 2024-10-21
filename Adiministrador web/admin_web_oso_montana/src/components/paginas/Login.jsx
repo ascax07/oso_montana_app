@@ -33,33 +33,49 @@ const validatePassword = (password) => {
 };
 
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
-      const docRef = doc(db, "usuarios", user.uid)
-      const docSnap = await getDoc(docRef)
-      if (docSnap.exists()) {
-        const rol = docSnap.data().rol
-        if (rol === "administrador") {
-          navigate('/')
-        } else {
-          setError("No tienes permiso para acceder a esta página.")
-          await auth.signOut()
-        }
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    const docRef = doc(db, "usuarios", user.uid);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const rol = docSnap.data().rol;
+      if (rol === "administrador") {
+        navigate('/');
       } else {
-        setError("Usuario no encontrado en la base de datos.")
-        await auth.signOut()
+        setError("No tienes permiso para acceder a esta página.");
+        await auth.signOut();
       }
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setIsLoading(false)
+    } else {
+      setError("Usuario no encontrado en la base de datos.");
+      await auth.signOut();
     }
+  } catch (error) {
+    // Manejando errores específicos de Firebase Authentication
+    switch (error.code) {
+      case 'auth/user-not-found':
+        setError("No se encontró ningún usuario con este correo.");
+        break;
+      case 'auth/wrong-password':
+        setError("La contraseña es incorrecta.");
+        break;
+      case 'auth/invalid-email':
+        setError("El formato del correo es inválido.");
+        break;
+      default:
+        setError("el usuario no esta registrado o la contraseña es invalida");
+        break;
+    }
+  } finally {
+    setIsLoading(false);
   }
+};
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword)
 
