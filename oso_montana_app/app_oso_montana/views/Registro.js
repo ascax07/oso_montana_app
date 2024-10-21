@@ -26,9 +26,16 @@ const Registro = ({ navigation }) => {
   const handleRegistro = async () => {
     // Verificar si todos los campos están llenos
     if (!email || !nombre || !contraseña || !confirmarContraseña) {
-      Alert.alert('Atencion!', 'Debes rellenar todos los campos');
+      Alert.alert('Atención', 'Debes rellenar todos los campos');
       return;
     }
+  
+    if (contraseña.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+  
+  
   
     if (contraseña !== confirmarContraseña) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
@@ -52,11 +59,20 @@ const Registro = ({ navigation }) => {
       Alert.alert('Éxito', 'Usuario registrado correctamente');
       navigation.navigate('IniciarSesion');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      if (error.code === 'auth/email-already-in-use') {
+        Alert.alert('Error', 'Este correo electrónico ya está registrado. Intenta con otro.');
+      } else if (error.code === 'auth/weak-password') {
+        Alert.alert('Error', 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.');
+      } else if (error.code === 'auth/network-request-failed') {
+        Alert.alert('Error', 'Error de red. Verifica tu conexión a Internet.');
+      } else {
+        Alert.alert('Error', error.message);
+      }
     } finally {
       setIsLoading(false);
     }
   };
+  
   
 
   return (
