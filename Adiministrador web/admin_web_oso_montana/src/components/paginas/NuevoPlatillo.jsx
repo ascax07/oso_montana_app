@@ -116,12 +116,19 @@ const NuevoPlatillo = () => {
       imagen: ''
     },
     validationSchema: Yup.object({
-      nombre: Yup.string().min(3, 'El nombre debe tener al menos 3 caracteres.').required('El nombre del platillo es obligatorio.'),
-      precio: Yup.number().min(1, 'El precio debe ser mayor a 0.').required('El precio es obligatorio.'),
+      nombre: Yup.string().min(3, 'El nombre debe tener al menos 3 caracteres.')  .max(30, 'El nombre del platillo no puede tener más de 30 caracteres').required('El nombre del platillo es obligatorio.'),
+      precio: Yup.number().min(1, 'El precio debe ser mayor a 0.') .max(30000, 'El precio no puede ser mayor a 30.000 pesos') .required('El precio es obligatorio.'),
       categoria: Yup.string().required('La categoría es obligatoria.'),
-      descripcion: Yup.string().min(10, 'La descripción debe tener al menos 10 caracteres.').required('La descripción es obligatoria.'),
-      imagen: Yup.string().required('La imagen es obligatoria.')
+      descripcion: Yup.string().min(10, 'La descripción debe tener al menos 10 caracteres.') .max(150, 'La descripción debe ser menor a   150 caracteres').required('La descripción es obligatoria.'),
+      imagen: Yup.string().required('La imagen es obligatoria.'),
+      stock: Yup.number()
+        .min(0, 'El stock no puede ser negativo.')
+        .when('requierePreparacion', {
+          is: false,
+          then: Yup.number().required('El stock es obligatorio cuando no requiere preparación.')
+        })
     }),
+
     onSubmit: async (platillo) => {
       if (!urlimagen) {
         setErrorGlobal('Hubo un error: no has seleccionado ninguna imagen.');
