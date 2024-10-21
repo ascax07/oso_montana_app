@@ -22,9 +22,9 @@ const NuevaMesa = () => {
             ubicacion: 'primer piso'  // Valor predeterminado para la ubicación
         },
         validationSchema: Yup.object({
-            numero: Yup.string().required('El número de mesa es obligatorio.'),
+            numero:  Yup.number() .min(1, 'El precio debe ser mayor a 0.') .max(10, 'El numero de mesas debe ser menor a 10').required('El número de mesa es obligatorio.'),
             capacidad: Yup.number()
-                .min(1, 'La capacidad debe ser al menos 1.')
+                .min(1, 'La capacidad debe ser al menos 1.') .max(4, 'La capacidad debe ser menor a 4')
                 .required('La capacidad es obligatoria.'),
             ubicacion: Yup.string().required('La ubicación de la mesa es obligatoria.'),
         }),
