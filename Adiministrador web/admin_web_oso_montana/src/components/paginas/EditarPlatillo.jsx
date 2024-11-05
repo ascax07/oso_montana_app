@@ -21,6 +21,9 @@ const EditarPlatillo = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
+
+  const [stockVisible, setStockVisible] = useState(false); // Estado para manejar la visibilidad del stock
+
   const handleUploadStart = () => {
     setSubiendo(true);
     setProgreso(0);
@@ -178,6 +181,11 @@ const EditarPlatillo = () => {
           const data = docSnap.data();
           formik.setValues(data);
           setUrlimagen(data.imagen);
+          
+          // Verificar si el platillo tiene el campo 'stock'
+          if (data.stock !== undefined) {
+            setStockVisible(true); // Muestra el input de stock
+          }
         } else {
           console.log('No such document!');
           toast.current.show({
@@ -261,6 +269,30 @@ const EditarPlatillo = () => {
                   </motion.p>
                 ) : null}
               </motion.div>
+
+             {/* Input de Stock */}
+             {stockVisible && (
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100, delay: 0.1 }}
+              >
+                <div>
+                  <label htmlFor="stock" className="block text-sm font-medium text-gray-700">
+                    Stock
+                  </label>
+                  <input
+                    type="number"
+                    id="stock"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    name="stock"
+                    min="0"
+                    {...formik.getFieldProps('stock')} // Asegúrate de incluir esto para gestionar el estado de Formik
+                  />
+                </div>
+              </motion.div>
+            )}
 
               {/* Precio */}
               <motion.div

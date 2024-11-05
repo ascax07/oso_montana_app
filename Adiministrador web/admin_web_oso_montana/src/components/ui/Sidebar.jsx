@@ -1,20 +1,65 @@
-import React from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Utensils,  Grid, DollarSign, ChartArea , HandHelping, Settings, UserCog2 } from "lucide-react";
+import { Utensils, Grid, DollarSign, ChartArea, HandHelping, Settings, UserCog2 } from "lucide-react";
 import { motion } from "framer-motion";
-
+import { FirebaseContext } from '../../firebase';  // Asegúrate de que FirebaseContext exporta `db`
+import { collection, onSnapshot } from "firebase/firestore";
 
 export default function Sidebar() {
   const actualLocation = useLocation().pathname;
+  const { db } = useContext(FirebaseContext);  // Conexión a Firebase Firestore
+  
+  // Estados para almacenar los datos traídos de Firebase
+  const [mesasOcupadas, setMesasOcupadas] = useState(0);
+  const [totalMesas, setTotalMesas] = useState(0);
+  const [platosActivos, setPlatosActivos] = useState(0);
+  const [ordenesEnProceso, setOrdenesEnProceso] = useState(0);
+
+  useEffect(() => {
+    if (db) {
+      // Obtener mesas ocupadas y total de mesas
+      const unsubscribeMesas = onSnapshot(collection(db, "mesas"), (snapshot) => {
+        const mesas = snapshot.docs.map((doc) => doc.data());
+        const ocupadas = mesas.filter((mesa) => !mesa.disponible).length;
+        setMesasOcupadas(ocupadas);
+        setTotalMesas(mesas.length);
+      });
+
+      // Obtener platos activos
+      const unsubscribePlatos = onSnapshot(collection(db, "productos"), (snapshot) => {
+        // Filtrar solo los productos con existencia = true
+        const platos = snapshot.docs
+          .map((doc) => doc.data())
+          .filter((plato) => plato.existencia === true); // Filtro explícito
+        
+        setPlatosActivos(platos.length); // Actualizar con la cantidad de platos activos
+      });
+      
+
+      // Obtener órdenes en proceso
+      const unsubscribeOrdenes = onSnapshot(collection(db, "ordenes"), (snapshot) => {
+        const ordenes = snapshot.docs.map((doc) => doc.data());
+        const enProceso = ordenes.filter((orden) => !orden.completado).length;
+        setOrdenesEnProceso(enProceso);
+      });
+
+      // Limpiar los listeners al desmontar el componente
+      return () => {
+        unsubscribeMesas();
+        unsubscribePlatos();
+        unsubscribeOrdenes();
+      };
+    }
+  }, [db]);
+
   const locations = [
-    { to: "/", name: "Ordenes", icon: <HandHelping className="w-6 h-6" /> },
+    { to: "/", name: "Órdenes", icon: <HandHelping className="w-6 h-6" /> },
     { to: "/menu", name: "Menú", icon: <Utensils className="w-6 h-6" /> },
     { to: "/mesas", name: "Mesas", icon: <Grid className="w-6 h-6" /> },
     { to: "/ingresos", name: "Ingresos", icon: <DollarSign className="w-6 h-6" /> },
     { to: "/graficas", name: "Graficas", icon: <ChartArea className="w-6 h-6" /> },
     { to: "/gestion-usuarios", name: "Gestion usuarios", icon: <UserCog2 className="w-6 h-6" /> },
     { to: "/configuraciones", name: "Configuraciones", icon: <Settings className="w-6 h-6" /> },
-
   ];
 
   return (
@@ -54,9 +99,9 @@ export default function Sidebar() {
         className="p-4 bg-red-900 bg-opacity-50 backdrop-blur-md m-2 rounded-lg"
       >
         <h2 className="font-bold mb-2">Resumen</h2>
-        <p className="text-sm">Mesas: 12/20 ocupadas</p>
-        <p className="text-sm">Menú: 42 platos activos</p>
-        <p className="text-sm">Ordenes: 8 en proceso</p>
+        <p className="text-sm">Mesas: {mesasOcupadas}/{totalMesas} ocupadas</p>
+        <p className="text-sm">Menú: {platosActivos} platos activos</p>
+        <p className="text-sm">Ordenes: {ordenesEnProceso} en proceso</p>
       </motion.div>
     </motion.div>
   );

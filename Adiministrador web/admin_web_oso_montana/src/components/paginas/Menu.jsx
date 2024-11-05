@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import { FirebaseContext } from '../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore'; // Importar las funciones correctas
 import Platillo from "../ui/Platillo";
-import CategoriaPlatillo from '../../components/paginas/filtroCategorias/CategoriaPlatillo';
+import CategoriaPlatillo from '../../components/paginas/filtroCategorias_busquedas/CategoriaPlatillo';
 import { motion } from 'framer-motion';
-
 
 const Menu = () => {
     // Definir el state para los platillos

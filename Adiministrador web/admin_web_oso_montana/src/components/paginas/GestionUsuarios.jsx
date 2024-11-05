@@ -8,14 +8,7 @@ import { FirebaseContext } from '../../firebase'; // Contexto de Firebase
 export default function GestionUsuarios() {
   const { auth } = useContext(FirebaseContext);
 
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      alert("Sesión cerrada con éxito");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
-  };
+
 
   return (
     <motion.div

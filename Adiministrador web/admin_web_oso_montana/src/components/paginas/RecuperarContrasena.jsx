@@ -24,16 +24,7 @@ const validateInput = (input) => {
   return regex.test(input);
 }
 
-// Función modificada para manejar el cambio en el campo de correo
-const handleEmailChange = (e) => {
-  const value = e.target.value;
-  if (validateInput(value)) {
-    setEmail(value);
-    setError(null);
-  } else {
-    setError("El correo contiene caracteres no permitidos.");
-  }
-};
+
 
   const showConfirmDialog = () => {
     confirmDialog({

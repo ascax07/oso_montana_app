@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { Toast } from 'primereact/toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeContext } from '../ui/ThemeContext';
 
 const MAX_FILE_SIZE_MB = 2;
 
@@ -18,6 +19,22 @@ const NuevoPlatillo = () => {
   const [errorGlobal, setErrorGlobal] = useState('');
   const toast = useRef(null);
   const navigate = useNavigate();
+
+  const [requierePreparacion, setRequierePreparacion] = useState(false);
+  const [stock, setStock] = useState(0);
+
+  const { darkMode } = useContext(ThemeContext);
+
+  const handleRequierePreparacionChange = (event) => {
+    setRequierePreparacion(event.target.value === 'si');
+    if (event.target.value === 'si') {
+      setStock(0);
+    }
+  };
+
+  const handleStockChange = (event) => {
+    setStock(event.target.value >= 0 ? event.target.value : 0);
+  };
 
   const handleUploadStart = () => {
     setSubiendo(true);
@@ -58,7 +75,7 @@ const NuevoPlatillo = () => {
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
-    
+
     if (file) {
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
         toast.current.show({
@@ -113,13 +130,14 @@ const NuevoPlatillo = () => {
       precio: '',
       categoria: '',
       descripcion: '',
-      imagen: ''
+      imagen: '',
+      stock: 0
     },
     validationSchema: Yup.object({
-      nombre: Yup.string().min(3, 'El nombre debe tener al menos 3 caracteres.')  .max(30, 'El nombre del platillo no puede tener más de 30 caracteres').required('El nombre del platillo es obligatorio.'),
-      precio: Yup.number().min(1, 'El precio debe ser mayor a 0.') .max(30000, 'El precio no puede ser mayor a 30.000 pesos') .required('El precio es obligatorio.'),
+      nombre: Yup.string().min(3, 'El nombre debe tener al menos 3 caracteres.').max(30, 'El nombre del platillo no puede tener más de 30 caracteres').required('El nombre del platillo es obligatorio.'),
+      precio: Yup.number().min(1, 'El precio debe ser mayor a 0.').max(30000, 'El precio no puede ser mayor a 30.000 pesos').required('El precio es obligatorio.'),
       categoria: Yup.string().required('La categoría es obligatoria.'),
-      descripcion: Yup.string().min(10, 'La descripción debe tener al menos 10 caracteres.') .max(150, 'La descripción debe ser menor a   150 caracteres').required('La descripción es obligatoria.'),
+      descripcion: Yup.string().min(10, 'La descripción debe tener al menos 10 caracteres.').max(150, 'La descripción debe ser menor a   150 caracteres').required('La descripción es obligatoria.'),
       imagen: Yup.string().required('La imagen es obligatoria.'),
       stock: Yup.number()
         .min(0, 'El stock no puede ser negativo.')
@@ -128,7 +146,6 @@ const NuevoPlatillo = () => {
           then: Yup.number().required('El stock es obligatorio cuando no requiere preparación.')
         })
     }),
-
     onSubmit: async (platillo) => {
       if (!urlimagen) {
         setErrorGlobal('Hubo un error: no has seleccionado ninguna imagen.');
@@ -143,6 +160,13 @@ const NuevoPlatillo = () => {
           try {
             platillo.existencia = true;
             platillo.imagen = urlimagen;
+
+            if (requierePreparacion) {
+              delete platillo.stock;
+            } else {
+              platillo.stock = stock;
+            }
+
             await addDoc(collection(db, 'productos'), platillo);
             toast.current.show({
               severity: 'success',
@@ -191,7 +215,7 @@ const NuevoPlatillo = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 py-12 px-4 sm:px-6 lg:px-8"
+      className={`min-h-screen py-12 px-4 sm:px-6 lg:px-8 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
     >
       <Toast ref={toast} />
       <ConfirmDialog />
@@ -199,10 +223,10 @@ const NuevoPlatillo = () => {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="max-w-3xl mx-auto bg-white shadow-2xl rounded-3xl overflow-hidden"
+        className={`max-w-3xl mx-auto ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-2xl rounded-3xl overflow-hidden`}
       >
         <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-8">Agregar Nuevo Platillo</h2>
+          <h2 className={`text-3xl font-extrabold ${darkMode ? 'text-white' : 'text-gray-900'} text-center mb-8`}>Agregar Nuevo Platillo</h2>
           <form onSubmit={formik.handleSubmit} className="space-y-8">
             <AnimatePresence>
               {/* Nombre del platillo */}
@@ -212,7 +236,7 @@ const NuevoPlatillo = () => {
                 exit={{ x: 100, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 100 }}
               >
-                <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="nombre" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Nombre del platillo
                 </label>
                 <div className="mt-1">
@@ -221,7 +245,7 @@ const NuevoPlatillo = () => {
                     name="nombre"
                     id="nombre"
                     {...formik.getFieldProps('nombre')}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    className={`block w-full pl-10 pr-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md leading-5 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm`}
                     placeholder="Ej. Café Latte"
                   />
                 </div>
@@ -237,6 +261,56 @@ const NuevoPlatillo = () => {
                 ) : null}
               </motion.div>
 
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>¿Requiere preparación?</label>
+                <div className="mt-2">
+                  <label className="inline-flex items-center mr-6">
+                    <input
+                      type="radio"
+                      value="si"
+                      checked={requierePreparacion === true}
+                      onChange={handleRequierePreparacionChange}
+                      className={`form-radio h-5 w-5 ${darkMode ? 'text-red-600' : 'text-red-800'}`}
+                    />
+                    <span className={`ml-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sí</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      value="no"
+                      checked={requierePreparacion === false}
+                      onChange={handleRequierePreparacionChange}
+                      className={`form-radio h-5 w-5 ${darkMode ? 'text-red-600' : 'text-red-800'}`}
+                    />
+                    <span className={`ml-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>No</span>
+                  </label>
+                </div>
+              </div>
+
+              {!requierePreparacion && (
+                <motion.div
+                  initial={{ x: -100, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 100, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 100, delay: 0.4 }}
+                >
+                  <div>
+                    <label htmlFor="stock" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Stock
+                    </label>
+                    <input
+                      type="number"
+                      id="stock"
+                      className={`mt-1 block w-full pl-10 pr-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md leading-5 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm`}
+                      name="stock"
+                      min="0"
+                      value={stock}
+                      onChange={handleStockChange}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               {/* Precio */}
               <motion.div
                 initial={{ x: -100, opacity: 0 }}
@@ -244,24 +318,24 @@ const NuevoPlatillo = () => {
                 exit={{ x: 100, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 100, delay: 0.1 }}
               >
-                <label htmlFor="precio" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="precio" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Precio
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm">$</span>
+                    <span className={`${darkMode ? 'text-gray-500' : 'text-gray-500'} sm:text-sm`}>$</span>
                   </div>
                   <input
                     type="number"
                     name="precio"
                     id="precio"
                     {...formik.getFieldProps('precio')}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    className={`block w-full pl-10 pr-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md leading-5 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm`}
                     placeholder="0.000"
                     aria-describedby="price-currency"
                   />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm" id="price-currency">
+                    <span className={`${darkMode ? 'text-gray-500' : 'text-gray-500'} sm:text-sm`} id="price-currency">
                       COP
                     </span>
                   </div>
@@ -285,23 +359,22 @@ const NuevoPlatillo = () => {
                 exit={{ x: 100, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 100, delay: 0.2 }}
               >
-                <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="categoria" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Categoría
                 </label>
                 <select
                   id="categoria"
                   name="categoria"
                   {...formik.getFieldProps('categoria')}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                  className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} focus:outline-none focus:ring-red-800 focus:border-red-800 sm:text-sm rounded-md`}
                 >
                   <option value="">Selecciona una categoría</option>
-                  <option value="cafe_caliente">cafe caliente</option>
-                  <option value="cafe_frio">cafe frio</option>
-                  <option value="helados">helados</option>
+                  <option value="cafe_caliente">Café caliente</option>
+                  <option value="cafe_frio">Café frío</option>
+                  <option value="helados">Helados</option>
                   <option value="bebida">Bebida</option>
                   <option value="postre">Postre</option>
-                  <option value="merienda">merienda</option>
-
+                  <option value="merienda">Merienda</option>
                 </select>
                 {formik.touched.categoria && formik.errors.categoria ? (
                   <motion.p
@@ -322,7 +395,7 @@ const NuevoPlatillo = () => {
                 exit={{ x: 100, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 100, delay: 0.3 }}
               >
-                <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="descripcion" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Descripción
                 </label>
                 <div className="mt-1">
@@ -331,7 +404,7 @@ const NuevoPlatillo = () => {
                     name="descripcion"
                     rows={3}
                     {...formik.getFieldProps('descripcion')}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm"
+                    className={`block w-full pl-10 pr-3 py-2 border ${darkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md leading-5 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm`}
                     placeholder="Describe el platillo..."
                   />
                 </div>
@@ -354,12 +427,12 @@ const NuevoPlatillo = () => {
                 exit={{ x: 100, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 100, delay: 0.4 }}
               >
-                <label className="block text-sm font-medium text-gray-700">Imagen del platillo</label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Imagen del platillo</label>
+                <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed ${darkMode ? 'border-gray-600' : 'border-gray-300'} rounded-md`}>
                   {!urlimagen ? (
                     <div className="space-y-1 text-center">
                       <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
+                        className={`mx-auto h-12 w-12 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}
                         stroke="currentColor"
                         fill="none"
                         viewBox="0 0 48 48"
@@ -375,7 +448,7 @@ const NuevoPlatillo = () => {
                       <div className="flex text-sm text-gray-600">
                         <label
                           htmlFor="imagen"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-red-600 hover:text-red-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-red-500"
+                          className={`relative cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-white'} rounded-md font-medium ${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-500'} focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-red-500`}
                         >
                           <span>Sube una imagen</span>
                           <input
@@ -388,7 +461,7 @@ const NuevoPlatillo = () => {
                           />
                         </label>
                       </div>
-                      <p className="text-xs text-gray-500">PNG, JPG hasta 1MB</p>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>PNG, JPG hasta 1MB</p>
                     </div>
                   ) : (
                     <div className="space-y-1 text-center">
@@ -400,7 +473,7 @@ const NuevoPlatillo = () => {
                       <button
                         type="button"
                         onClick={handleRemoveImage}
-                        className="mt-2 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        className={`mt-2 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded ${darkMode ? 'text-red-300 bg-red-900 hover:bg-red-800' : 'text-red-700 bg-red-100 hover:bg-red-200'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
                       >
                         Quitar imagen
                       </button>
@@ -409,7 +482,7 @@ const NuevoPlatillo = () => {
                 </div>
                 {subiendo && (
                   <motion.div
-                    className="mt-2 h-2 bg-red-500 rounded-full"
+                    className={`mt-2 h-2 ${darkMode ? 'bg-red-600' : 'bg-red-500'} rounded-full`}
                     initial={{ width: 0 }}
                     animate={{ width: `${progreso}%` }}
                     transition={{ duration: 0.5 }}
@@ -440,7 +513,7 @@ const NuevoPlatillo = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   type="submit"
-                  className="ml-3 inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-lg font-medium rounded-full text-white bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 ease-in-out transform hover:-translate-y-1"
+                  className={`ml-3 inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-lg font-medium rounded-full text-white ${darkMode ? 'bg-red-700 hover:bg-red-600' : 'bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 ease-in-out transform hover:-translate-y-1`}
                 >
                   Agregar Platillo
                 </motion.button>

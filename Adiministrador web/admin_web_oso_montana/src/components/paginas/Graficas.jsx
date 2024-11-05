@@ -8,6 +8,8 @@ import 'jspdf-autotable';
 import logo from '../../assets/oso_montana_logo.png';
 import img_borde1 from '../../assets/borde1.png';
 import img_borde2 from '../../assets/borde2.png';
+import { ThemeContext } from '../ui/ThemeContext';
+
 
 const Graficas = () => {
     const { db } = useContext(FirebaseContext);
@@ -17,6 +19,8 @@ const Graficas = () => {
     const [ano, setAno] = useState(new Date().getFullYear());
     const [mensaje, setMensaje] = useState('');
     const [vista, setVista] = useState('mensual');
+    const { darkMode } = useContext(ThemeContext);
+
     
     useEffect(() => {
         if (!db) return;
@@ -93,8 +97,10 @@ const Graficas = () => {
                 return sum;
             }
             const subtotal = dato.orden.reduce((s, item) => s + (item.precio * item.cantidad), 0);
-            return sum + subtotal;
+            const impuesto = subtotal * 0.08;  // 8% consumption tax
+            return sum + subtotal + impuesto;
         }, 0);
+        
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(24);
@@ -109,7 +115,7 @@ const Graficas = () => {
         doc.text('osodelamontana@gmail.com', pageWidth / 2, 68, { align: 'center' });
 
         doc.setFontSize(12);
-        const textoIngresos = `Durante el mes ${mes}/${ano} el restaurante "Oso de la Montaña" generó un total de $${totalIngresos.toLocaleString('es-CO')} COP en ingresos.`;
+        const textoIngresos = `Durante el mes ${mes}/${ano} la cafeteria "Oso de la Montaña" generó un total de $${totalIngresos.toLocaleString('es-CO')} COP en ingresos.`;
         doc.text(textoIngresos, 14, 80, { maxWidth: pageWidth - 28 });
 
         doc.setFontSize(14);
@@ -130,28 +136,28 @@ const Graficas = () => {
             const fechaIngreso = dato.fecha_ingreso ? dato.fecha_ingreso.toDate().toLocaleString() : '';
             const mesa = dato.mesa || 'N/A';
             const metodoPago = dato.tipoPago || 'Desconocido';
-
+        
             // Validar que dato.orden esté definido y sea un arreglo
             const orden = dato.orden && Array.isArray(dato.orden)
-                ? dato.orden.map(item => `${item.nombre} = $${item.precio.toLocaleString('es-CO')}`).join(', ')
+                ? dato.orden.map(item => `${item.cantidad}x ${item.nombre} = $${(item.precio * item.cantidad).toLocaleString('es-CO')}`).join(', ')
                 : 'N/A';
-
-            const subtotal = dato.orden && Array.isArray(dato.orden)
-                ? dato.orden.reduce((s, item) => s + (item.precio * item.cantidad), 0)
-                : 0;
-            const impuesto = subtotal * 0.08;
-            const total = subtotal + impuesto;
-
+        
+            const total = dato.total || 0;  // Aquí se toma el campo "total" de la orden
+            const impuesto = total * 0.08;  // Impuesto del 8%
+            const subtotal = total - impuesto; // SUBTOTAL, resta del impuesto
+        
             return [
                 fechaIngreso,
                 mesa,
                 metodoPago,
-                orden,
-                `$${subtotal.toLocaleString('es-CO')}`,
-                `$${impuesto.toLocaleString('es-CO')}`,
-                `$${total.toLocaleString('es-CO')}`
+                orden,  // Orden con formato "cantidad x nombre = total"
+                `$${subtotal.toLocaleString('es-CO')}`, // SUBTOTAL sin impuestos
+                `$${impuesto.toLocaleString('es-CO')}`, // Impuesto al Consumo (8%)
+                `$${total.toLocaleString('es-CO')}` // TOTAL PAGADO con impuesto incluido
             ];
         });
+        
+        
 
         doc.autoTable({
             head: [tableColumn],
@@ -163,6 +169,7 @@ const Graficas = () => {
         });
 
         doc.addPage();
+        addDecorativeBorders(); 
         doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
         doc.text('Análisis de Ventas', 14, 20);
@@ -206,37 +213,42 @@ const Graficas = () => {
 
     return (
         <div className="card">
-            <h1 className="text-3xl font-light mb-4">Gráficas - {mes}/{ano}</h1>
-
             <div className="mb-4">
+            <h1 className="flex mb-5 flex-wrap items-center bg-gradient-to-r from-[#853030] to-[#6d2727] text-white p-4 rounded-t-lg">Graficas de Ingresos</h1>
+
                 <button
-                    className={`px-4 py-2 ${vista === 'mensual' ? 'bg-blue-500' : 'bg-gray-500'} text-white rounded`}
+                   className={`flex-1 inline-flex justify-center items-center px-4 py-3 mb-5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                    darkMode 
+                        ? 'bg-red-700 hover:bg-red-600' 
+                        : 'bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950'
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
                     onClick={() => setVista('mensual')}
                 >
                     Ver Gráfica Mensual
                 </button>
                 <button
-                    className={`ml-4 px-4 py-2 ${vista === 'anual' ? 'bg-blue-500' : 'bg-gray-500'} text-white rounded`}
+                 
+                    className={`ml-4  flex-1 inline-flex justify-center items-center px-4 py-3 mb-5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                        darkMode 
+                            ? 'bg-red-700 hover:bg-red-600' 
+                            : 'bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
                     onClick={() => setVista('anual')}
                 >
                     Ver Gráfica Anual
-                </button>
-                <button
-                    className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
-                    onClick={generarPDF}
-                >
-                    Generar PDF
                 </button>
             </div>
 
             {vista === 'mensual' ? (
                 <>
                     <div className="mb-4">
+                    <h1 className="text-3xl font-light mb-4">Gráficas del mes</h1>
+
                         <label htmlFor="mes">Mes:</label>
                         <select
                             id="mes"
                             value={mes}
-                            onChange={(e) => setMes(Number(e.target.value))}
+                            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"                            onChange={(e) => setMes(Number(e.target.value))}
                         >
                             {[...Array(12).keys()].map(i => (
                                 <option key={i + 1} value={i + 1}>{i + 1}</option>
@@ -246,6 +258,7 @@ const Graficas = () => {
                         <label htmlFor="ano" className="ml-4">Año:</label>
                         <select
                             id="ano"
+                            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                             value={ano}
                             onChange={(e) => setAno(Number(e.target.value))}
                         >
@@ -258,7 +271,7 @@ const Graficas = () => {
                     {mensaje ? (
                         <p>{mensaje}</p>
                     ) : (
-                        <Grafica datos={datosAgrupados} /> // Usamos datosAgrupados para la gráfica
+                        <Grafica datos={datosAgrupados} generarPDF={() => generarPDF(datos, mes, ano)} />
                     )}
                 </>
             ) : (
